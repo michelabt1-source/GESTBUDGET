@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediKeep | Analyse Budgétaire</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8f9fa; }
+        .card-kpi { border: none; border-radius: 12px; transition: transform 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .card-kpi:hover { transform: translateY(-5px); }
+        .progress { height: 30px; border-radius: 15px; font-weight: bold; }
+        .table-custom { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .sidebar-title { color: #2c3e50; font-weight: 700; border-left: 5px solid #27ae60; padding-left: 15px; }
+    </style>
+</head>
+<body>
+
+<div class="container py-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="sidebar-title">Tableau de Bord : Globale Computer Solutions </h2>
+        <span class="badge bg-dark p-2">Exercice {{ 2026 }}</span>
+    </div>
+
+    <div class="row g-4 mb-5">
+        <div class="col-md-3">
+            <div class="card card-kpi p-3 bg-white">
+                <small class="text-muted text-uppercase">Budget Révisé</small>
+                <h3 class="fw-bold mt-2 text-primary">{{ budget_revise }} <small>FCFA</small></h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card card-kpi p-3 bg-white border-start border-danger border-5">
+                <small class="text-muted text-uppercase">Dépenses Réelles</small>
+                <h3 class="fw-bold mt-2 text-danger">{{ total_depense }} <small>FCFA</small></h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card card-kpi p-3 bg-white border-start border-success border-5">
+                <small class="text-muted text-uppercase">Solde Disponible</small>
+                <h3 class="fw-bold mt-2 text-success">{{ solde_disponible }} <small>FCFA</small></h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card card-kpi p-3 bg-dark text-white">
+                <small class="text-light text-uppercase">Modifications (DBM)</small>
+                <h3 class="fw-bold mt-2">+{{ total_ajouts }} / -{{ total_retraits }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="card p-4 mb-5 border-0 shadow-sm">
+        <h5 class="mb-3">Avancement de la consommation budgétaire</h5>
+        <div class="progress mb-2">
+            <div class="progress-bar {% if taux_execution > 90 %}bg-danger{% else %}bg-success{% endif %}" 
+                 role="progressbar" style="width: {{ taux_execution }}%;">
+                {{ taux_execution }}%
+            </div>
+        </div>
+        <small class="text-muted">Le taux d'exécution actuel est de {{ taux_execution }}% sur l'ensemble de l'exercice.</small>
+    </div>
+
+    <div class="table-custom">
+        <div class="p-3 bg-white border-bottom">
+            <h5 class="m-0">Top 5 des postes de dépenses les plus importants</h5>
+        </div>
+        <table class="table table-hover m-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Compte</th>
+                    <th>Libellé du Sous-Compte</th>
+                    <th class="text-end">Montant Consommé</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in top_depenses %}
+                <tr>
+                    <td><span class="badge bg-secondary">{{ item.comptes }}</span></td>
+                    <td>{{ item.libelle_sous_compte }}</td>
+                    <td class="text-end fw-bold">{{ item.total }} FCFA</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+</body>
+</html>
