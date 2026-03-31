@@ -1,0 +1,171 @@
+{% extends 'budget_app/base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold m-0 text-dark">Gestion de la Structure</h4>
+        <p class="text-muted small">Configurez vos référentiels de base</p>
+    </div>
+    <button class="btn btn-primary btn-sm px-4 rounded-pill">
+        <i class="fas fa-plus me-2"></i> Nouvel Élément
+    </button>
+</div>
+
+<div class="card-custom border-0 shadow-sm p-0 overflow-hidden" style="height: auto;">
+    <ul class="nav nav-tabs bg-light px-3 pt-2 border-0" id="structureTab" role="tablist">
+        <li class="nav-item">
+            <button class="nav-link active fw-600 border-0 py-3" id="prod-tab" data-bs-toggle="tab" data-bs-target="#prod" type="button">
+                <i class="fas fa-box me-2"></i> Produits
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link fw-600 border-0 py-3" id="fourn-tab" data-bs-toggle="tab" data-bs-target="#fourn" type="button">
+                <i class="fas fa-truck-moving me-2"></i> Fournisseurs
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link fw-600 border-0 py-3" id="unit-tab" data-bs-toggle="tab" data-bs-target="#unit" type="button">
+                <i class="fas fa-ruler-combined me-2"></i> Unités
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link fw-600 border-0 py-3" id="comm-tab" data-bs-toggle="tab" data-bs-target="#comm" type="button">
+                <i class="fas fa-users me-2"></i> Commission
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content p-4" id="structureTabContent">
+        <div class="tab-pane fade show active" id="prod" role="tabpanel">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light text-muted small uppercase">
+                        <tr>
+                            <th>Compte</th>
+                            <th>Désignation</th>
+                            <th>Quantité</th>
+                            <th>Unité</th>
+                            <th>Spécification</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in produits %}
+                        <tr>
+                            <td><span class="badge bg-soft-primary">{{ p.compte }}</span></td>
+                            <td class="fw-bold text-dark">{{ p.designation }}</td>
+                            <td><span class="fw-bold text-dark">{{ p.quantite }}</span></td>
+                            <td><small class="text-muted">{{ p.unite|default:"" }}</small></td>
+                            <td class="small text-muted">{{ p.specification|truncatewords:10|default:"-" }}</td>
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-light border text-primary"><i class="fas fa-edit"></i></button>
+                                <button class="btn btn-sm btn-light border text-info"><i class="fas fa-info-circle"></i></button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="6" class="text-center py-4 text-muted">Aucun produit enregistré.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="fourn" role="tabpanel">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light text-muted small uppercase">
+                        <tr>
+                            <th>Code</th>
+                            <th>Nom / Raison Sociale</th>
+                            <th>Téléphone</th>
+                            <th>Ville</th>
+                            <th class="text-end">Engagé (FCFA)</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for f in fournisseurs %}
+                        <tr>
+                            <td><span class="badge bg-light text-dark border">{{ f.code_four }}</span></td>
+                            <td class="fw-bold text-dark">{{ f.nom }}</td>
+                            <td><div class="small fw-bold">{{ f.telephone }}</div></td>
+                            <td><small class="text-muted">{{ f.ville }}</small></td>
+                            <td class="text-end fw-bold text-primary">{{ f.montant_engage|floatformat:0 }} F</td>
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-light border text-primary"><i class="fas fa-edit"></i></button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="unit" role="tabpanel">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light text-muted small">
+                        <tr>
+                            <th>Libellé de l'Unité</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for u in unites %}
+                        <tr>
+                            <td class="fw-bold text-dark">{{ u.libelle_unite }}</td>
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-light border text-primary"><i class="fas fa-edit"></i></button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="comm" role="tabpanel">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light text-muted small uppercase">
+                        <tr>
+                            <th>Nom du Membre</th>
+                            <th>Qualité / Titre</th>
+                            <th class="text-center">Signature</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for m in commissions %}
+                            <td class="fw-bold text-dark">
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-soft-primary rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 35px; height: 35px; font-size: 0.8rem;">
+                                        {{ m.nom_membre_commission|slice:":1" }}
+                                    </div>
+                                    {{ m.nom_membre_commission }}
+                                </div>
+                            </td>
+                            <td><span class="badge bg-light text-dark border-0 px-3 py-2">{{ m.qualite }}</span></td>
+                            <td class="text-center">
+                                {% if m.signature %}
+                                    <span class="text-success small fw-bold"><i class="fas fa-check-circle me-1"></i> Prête</span>
+                                {% else %}
+                                    <span class="text-danger small fw-bold"><i class="fas fa-times-circle me-1"></i> Manquante</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-light border text-primary"><i class="fas fa-user-edit"></i></button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div> </div> <style>
+    .nav-tabs .nav-link { color: #64748b; background: transparent; transition: 0.3s; margin-right: 15px; font-size: 0.9rem; }
+    .nav-tabs .nav-link.active { color: var(--sidebar-bg) !important; border-bottom: 3px solid var(--accent-green) !important; font-weight: 700; }
+    .table thead th { border: none; letter-spacing: 0.5px; padding: 15px; }
+    .table tbody td { padding: 15px; border-bottom: 1px solid #f1f5f9; }
+</style>
+{% endblock %}

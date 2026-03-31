@@ -1,0 +1,104 @@
+{% extends 'budget_app/base.html' %}
+
+{% block content %}
+<div class="row g-4 mb-4">
+    <div class="col-md-4">
+        <div class="card-custom d-flex justify-content-between align-items-center">
+            <div>
+                <div class="kpi-label">Budget Alloué</div>
+                <div class="kpi-value text-primary">{{ total_alloue|default:"25 000 000" }} <small style="font-size: 0.8rem;">F</small></div>
+                <span class="text-muted small"><i class="fas fa-calendar me-1"></i> 2026</span>
+            </div>
+            <div class="icon-circle bg-soft-primary"><i class="fas fa-wallet"></i></div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card-custom d-flex justify-content-between align-items-center">
+            <div>
+                <div class="kpi-label">Consommation</div>
+                <div class="kpi-value text-danger">{{ total_depense|default:"8 450 000" }} <small style="font-size: 0.8rem;">F</small></div>
+                <span class="text-danger small fw-bold">Dépenses réelles</span>
+            </div>
+            <div class="icon-circle bg-soft-danger"><i class="fas fa-receipt"></i></div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card-custom d-flex justify-content-between align-items-center">
+            <div>
+                <div class="kpi-label">Disponibilité</div>
+                <div class="kpi-value text-success">{{ solde_disponible|default:"16 550 000" }} <small style="font-size: 0.8rem;">F</small></div>
+                <span class="text-success small fw-bold">Solde libre</span>
+            </div>
+            <div class="icon-circle bg-soft-success"><i class="fas fa-shield-halved"></i></div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-md-8">
+        <div class="card-custom">
+            <h6 class="fw-bold mb-4">Évolution des flux (Engagé vs Réalisé)</h6>
+            <div style="height: 300px; position: relative;">
+                <canvas id="mainBudgetChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card-custom mb-4">
+            <h6 class="fw-bold mb-4 text-center">Taux d'exécution</h6>
+            <div class="text-center mb-4">
+                <h1 class="display-5 fw-bold text-success">{{ taux_execution|default:"34" }}%</h1>
+            </div>
+            <div class="progress rounded-pill" style="height: 10px;">
+                <div class="progress-bar bg-success" style="width: {{ taux_execution|default:'34' }}%"></div>
+            </div>
+        </div>
+        
+        <div class="card-custom bg-dark text-white">
+            <h6 class="fw-bold mb-2">Actions</h6>
+            <p class="small text-white-50">Exporter le rapport mensuel pour la direction.</p>
+            <button class="btn btn-success w-100 btn-sm fw-bold">Exporter en PDF</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const ctx = document.getElementById('mainBudgetChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: {{ graph_labels|default:'["Jan", "Feb", "Mar", "Apr", "May"]'|safe }},
+            datasets: [
+                {
+                    label: 'Réalisé (M)',
+                    type: 'line',
+                    data: {{ graph_realisations|default:'[10, 15, 8, 20, 12]'|safe }},
+                    borderColor: '#10b981',
+                    tension: 0.4,
+                    fill: false
+                },
+                {
+                    label: 'Engagé (M)',
+                    data: {{ graph_engagements|default:'[12, 18, 10, 25, 15]'|safe }},
+                    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                    borderRadius: 5
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: true, position: 'bottom' } },
+            scales: {
+                y: { beginAtZero: true, ticks: { callback: v => v + 'M' } },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+</script>
+{% endblock %}
