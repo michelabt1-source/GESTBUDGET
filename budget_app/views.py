@@ -1,43 +1,30 @@
+import json
 from django.shortcuts import render
-from django.db.models import Sum, F
-from .models import AllocationBudget, Depense
 
-def analyse_budgetaire(request):
-    # --- 1. LES CHIFFRES GLOBAUX (KPI) ---
-    # Total du budget initial prévu (Allocation)
-    total_alloue = AllocationBudget.objects.aggregate(Sum('budget_primitive'))['budget_primitive__sum'] or 0
-    
-    # Total des dépenses effectuées (Réalisations)
-    total_depense = Depense.objects.aggregate(Sum('budget_primitive'))['budget_primitive__sum'] or 0
-    
-    # Prise en compte des modifications budgétaires (DBM)
-    total_ajouts = AllocationBudget.objects.aggregate(Sum('dbm_ajout'))['dbm_ajout__sum'] or 0
-    total_retraits = AllocationBudget.objects.aggregate(Sum('dbm_moins'))['dbm_moins__sum'] or 0
-    
-    # Budget Actuel Révisé = Initial + Ajouts - Retraits
-    budget_revise = total_alloue + total_ajouts - total_retraits
-    
-    # Solde Disponible (Ce qu'il reste en caisse)
-    solde_disponible = budget_revise - total_depense
-    
-    # Taux d'Exécution (Performance)
-    taux_execution = (total_depense / budget_revise * 100) if budget_revise > 0 else 0
+from budget_app.models import Fournisseur, MembresCommission, Produit, Unite
 
-    # --- 2. ANALYSE PAR SECTION (TOP 5) ---
-    # Quels sont les comptes qui consomment le plus ?
-    top_depenses = Depense.objects.values('libelle_sous_compte', 'comptes') \
-        .annotate(total=Sum('budget_primitive')) \
-        .order_by('-total')[:5]
+
+def home(request):
+    # Simulation de données issues de tes modèles (BonEngagement et Facture)
+    # Dans ton vrai code, utilise .aggregate(Sum('montant'))
+    labels = ["Jan", "Fév", "Mar", "Avr", "Mai", "Juin"]
+    
+    # On divise par 1 000 000 pour simplifier l'affichage
+    engagements = [12.5, 18.2, 14.0, 25.8, 22.1, 30.5] # En Millions
+    realisations = [10.2, 15.0, 13.8, 20.1, 19.5, 25.0] # En Millions
 
     context = {
-        'total_alloue': total_alloue,
-        'total_depense': total_depense,
-        'budget_revise': budget_revise,
-        'solde_disponible': solde_disponible,
-        'taux_execution': round(taux_execution, 2),
-        'top_depenses': top_depenses,
-        'total_ajouts': total_ajouts,
-        'total_retraits': total_retraits,
+        'graph_labels': json.dumps(labels),
+        'graph_engagements': json.dumps(engagements),
+        'graph_realisations': json.dumps(realisations),
+        # ... tes autres KPIs ...
     }
-
-    return render(request, 'budget_app/stats.html', context)
+    return render(request, 'budget_app/home.html', context)
+def structure_view(request):
+    context = {
+        'produits': Produit.objects.all(),
+        'fournisseurs': Fournisseur.objects.all(),
+        'unites': Unite.objects.all(),
+        'commissions': MembresCommission.objects.all(),
+    }
+    return render(request, 'budget_app/structure.html', context)
