@@ -21,10 +21,22 @@ def home(request):
     }
     return render(request, 'budget_app/home.html', context)
 def structure_view(request):
+    # 1. Récupérer le mot-clé tapé par l'utilisateur
+    query = request.GET.get('q')
+    
+    # 2. Filtrer les produits si une recherche est lancée
+    if query:
+        produits_list = Produit.objects.filter(designation__icontains=query).order_by('designation')
+    else:
+        produits_list = Produit.objects.all().order_by('designation')
     context = {
+        
         'produits': Produit.objects.all(),
         'fournisseurs': Fournisseur.objects.all(),
         'unites': Unite.objects.all(),
         'commissions': MembresCommission.objects.all(),
     }
     return render(request, 'budget_app/structure.html', context)
+
+def index(request):
+    return render(request, 'budget_app/index.html')
