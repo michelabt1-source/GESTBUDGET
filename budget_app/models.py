@@ -1,5 +1,5 @@
 from django.db import models
-
+from django.contrib.auth.models import AbstractUser
 class Produit(models.Model):
     compte = models.CharField(max_length=100, verbose_name="Compte")
     designation = models.CharField(max_length=255, verbose_name="Désignation")
@@ -26,7 +26,7 @@ class AllocationBudget(models.Model):
     num_compte_principal = models.CharField(max_length=50, verbose_name="N° Compte Principale")
     num_sous_compte = models.CharField(max_length=50, verbose_name="N° Sous Compte")
     nom_attache = models.CharField(max_length=100, verbose_name="Attaché")
-    comptes = models.CharField(max_length=50, verbose_name="Comptes")
+    sous_compte = models.ForeignKey('SousCompte', on_delete=models.CASCADE, null=True, blank=True, verbose_name="Sous-Compte")
     annee_ex = models.CharField(max_length=50, verbose_name="Année_EX")
     budget_primitive = models.DecimalField(max_digits=18, decimal_places=2, default=0)
     libelle_sous_compte = models.CharField(max_length=255, verbose_name="Libellé")
@@ -37,7 +37,9 @@ class AllocationBudget(models.Model):
     dbm_ajout = models.DecimalField(max_digits=18, decimal_places=2, default=0, verbose_name="DBM_Ajout")
 
     def __str__(self):
-        return f"{self.comptes} - {self.mois}"
+        if self.sous_compte:
+            return f"{self.sous_compte} - {self.mois}"
+        return f"Allocation {self.id} - {self.mois}"
 
 class Budget(models.Model):
     allocation = models.ForeignKey(AllocationBudget, on_delete=models.CASCADE, null=True, blank=True)
@@ -455,6 +457,7 @@ class SousCompte(models.Model):
 
     def __str__(self):
         return f"{self.num_sous_compte} - {self.libelle_sous_compte}"
+   
     
 # --- TABLES DE RÉFÉRENCES SUPPLÉMENTAIRES ---
 
@@ -494,20 +497,21 @@ class Cumul(models.Model):
 # --- SÉCURITÉ ET ACCÈS ---
 
 class Role(models.Model):
-    nom_role = models.CharField(max_length=100, verbose_name="Nom du Rôle", default="")
+    nom_role = models.CharField(max_length=100, verbose_name="Nom du Rôle", unique=True)
 
     def __str__(self):
         return self.nom_role
 
-class Utilisateur(models.Model):
-    nom_user = models.CharField(max_length=100, verbose_name="Nom d'utilisateur", default="")
-    mot_de_passe = models.CharField(max_length=100, verbose_name="Mot de passe") # À hasher plus tard
+# On hérite de AbstractUser pour garder les fonctionnalités de base (email, username, etc.)
+class Utilisateur(AbstractUser):
+    # On ajoute la liaison avec ton modèle Role
+    role = models.ForeignKey(Role, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Rôle")
     
-    # Liaison vers la table Role (Clé avec doublons)
-    role = models.ForeignKey(Role, on_delete=models.CASCADE, verbose_name="Rôle")
+    # On peut ajouter d'autres infos spécifiques ici
+    service = models.CharField(max_length=100, verbose_name="Service / Direction", blank=True)
 
     def __str__(self):
-        return self.nom_user
+        return self.username # AbstractUser utilise 'username' par défaut
 
 # --- PARAMÉTRAGE COMPTABLE ---
 

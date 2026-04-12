@@ -1,9 +1,12 @@
 import json
-from django.shortcuts import render
+from django.db.models.manager import BaseManager
+from django.shortcuts import get_object_or_404, redirect, render
+from django.contrib.auth.decorators import login_required
 
-from budget_app.models import Fournisseur, MembresCommission, Produit, Unite
+from budget_app.forms import AllocationForm
+from budget_app.models import DBM, AllocationBudget, Fournisseur, MembresCommission, NumComptePrincipal, Produit, SousCompte, Unite, SituationGeneralBugdet
 
-
+@login_required
 def home(request):
     # Simulation de données issues de tes modèles (BonEngagement et Facture)
     # Dans ton vrai code, utilise .aggregate(Sum('montant'))
@@ -20,6 +23,7 @@ def home(request):
         # ... tes autres KPIs ...
     }
     return render(request, 'budget_app/home.html', context)
+@login_required
 def structure_view(request):
     # 1. Récupérer le mot-clé tapé par l'utilisateur
     query = request.GET.get('q')
@@ -37,6 +41,79 @@ def structure_view(request):
         'commissions': MembresCommission.objects.all(),
     }
     return render(request, 'budget_app/structure.html', context)
-
+@login_required 
 def index(request):
     return render(request, 'budget_app/index.html')
+
+@login_required
+def budget_view(request):
+    # --- LOGIQUE D'ENREGISTREMENT (POST) ---
+    if request.method == 'POST':
+        form = AllocationForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('budget')
+
+    # --- LOGIQUE D'AFFICHAGE (GET) ---
+    comptes_principaux = NumComptePrincipal.objects.all().order_by('num_compte_principal')
+    sous_comptes = SousCompte.objects.all().order_by('num_sous_compte')
+    allocations = AllocationBudget.objects.all().order_by('sous_compte__num_sous_compte')
+    historique_dbm = DBM.objects.all().order_by('-date_dbm')
+    
+    # Formulaire vide pour la modale
+    form_allocation = AllocationForm()
+    
+    # Gestion des situations
+    situations = SituationGeneralBugdet.objects.all()
+    mois_select = request.GET.get('mois')
+    if mois_select:
+        situations = situations.filter(mois__iexact=mois_select)
+    
+    for s in situations:
+        definitif = s.budget_primitive + s.dbm_ajout - s.dbm_moins
+        s.disponible = definitif - s.realisation_budget
+        s.taux_excurtion = round((s.realisation_budget / definitif) * 100, 2) if definitif > 0 else 0
+
+    for a in allocations:
+        a.budget_definitif = a.budget_primitive + a.dbm_ajout - a.dbm_moins
+
+    context = {
+        'comptes_principaux': comptes_principaux,
+        'sous_comptes': sous_comptes,
+        'allocations': allocations,
+        'historique_dbm': historique_dbm,
+        'situations': situations,
+        'mois_select': mois_select,
+        'form_allocation': form_allocation,
+    }
+    return render(request, 'budget_app/budget.html', context)
+
+@login_required
+def allocation_edit(request, pk):
+    allocation = get_object_or_404(AllocationBudget, pk=pk)
+
+    if request.method == 'POST':
+        form = AllocationForm(request.POST, instance=allocation)
+        if form.is_valid():
+            form.save()
+            return redirect('budget_page')
+    else:
+        form = AllocationForm(instance=allocation)
+
+    return render(request, 'budget_app/allocation_form.html', {
+        'form': form,
+        'allocation': allocation,
+    })
+
+@login_required
+def allocation_delete(request, pk):
+    allocation = get_object_or_404(AllocationBudget, pk=pk)
+
+    if request.method == 'POST':
+        allocation.delete()
+        return redirect('budget_page')
+
+    return render(request, 'budget_app/allocation_confirm_delete.html', {
+        'allocation': allocation,
+    })
+

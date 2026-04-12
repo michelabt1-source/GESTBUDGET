@@ -1,0 +1,65 @@
+{% extends 'budget_app/base.html' %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="card-header bg-danger bg-gradient py-3">
+                    <h5 class="mb-0 text-white text-center">
+                        <i class="fas fa-trash-alt me-2"></i>Confirmation de Suppression
+                    </h5>
+                </div>
+                
+                <div class="card-body p-4 text-center">
+                    <div class="mb-4">
+                        <i class="fas fa-exclamation-circle text-danger opacity-25" style="font-size: 4rem;"></i>
+                    </div>
+                    
+                    <h5 class="fw-bold text-dark mb-3">Êtes-vous sûr ?</h5>
+                    <p class="text-muted mb-4">
+                        Vous êtes sur le point de supprimer définitivement cette allocation. Cette action est irréversible.
+                    </p>
+
+                    <div class="bg-light rounded-4 p-3 mb-4 text-start border-start border-danger border-4">
+                        <div class="mb-2">
+                            <span class="small text-muted text-uppercase fw-bold">Compte</span><br>
+                            <span class="fw-bold">
+                                {% if allocation.sous_compte %}{{ allocation.sous_compte.num_sous_compte }}{% else %}{{ allocation.num_sous_compte }}{% endif %}
+                            </span>
+                        </div>
+                        <div class="mb-2">
+                            <span class="small text-muted text-uppercase fw-bold">Désignation</span><br>
+                            <span class="text-dark">
+                                {% if allocation.sous_compte %}{{ allocation.sous_compte.libelle_sous_compte }}{% else %}{{ allocation.libelle_sous_compte }}{% endif %}
+                            </span>
+                        </div>
+                        <div class="row">
+                            <div class="col-6">
+                                <span class="small text-muted text-uppercase fw-bold">Budget Primitif</span><br>
+                                <span class="fw-bold text-danger">{{ allocation.budget_primitive|floatformat:0 }} F</span>
+                            </div>
+                            <div class="col-6 text-end">
+                                <span class="small text-muted text-uppercase fw-bold">Exercice</span><br>
+                                <span class="badge bg-dark rounded-pill">{{ allocation.annee_ex }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-danger btn-lg rounded-pill shadow-sm">
+                                <i class="fas fa-check me-2"></i>Confirmer la suppression
+                            </button>
+                            <a href="{% url 'budget_page' %}" class="btn btn-link text-secondary text-decoration-none">
+                                Annuler et retourner au suivi
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

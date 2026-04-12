@@ -1,0 +1,86 @@
+{% extends 'budget_app/base.html' %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="card-header bg-primary py-3">
+                    <h5 class="mb-0 text-white"><i class="fas fa-file-invoice-dollar me-2"></i>Fiche d'Allocation Budgétaire</h5>
+                </div>
+                <div class="card-body p-4">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="row g-3 mb-4">
+                            <div class="col-12">
+                                <label class="form-label fw-bold small text-uppercase">Sous-Compte</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light"><i class="fas fa-list-ol"></i></span>
+                                    {{ form.sous_compte }}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold small text-uppercase">Année Exercice</label>
+                                {{ form.annee_ex }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold small text-uppercase">Mois</label>
+                                {{ form.mois }}
+                            </div>
+                        </div>
+
+                        <div class="p-3 rounded-4 bg-light mb-4">
+                            <div class="row g-3">
+                                <div class="col-md-12">
+                                    <label class="form-label fw-bold text-primary">Budget Primitif (F CFA)</label>
+                                    <div class="input-group input-group-lg">
+                                        {{ form.budget_primitive }}
+                                        <span class="input-group-text fw-bold">F CFA</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <label class="form-label small text-danger fw-bold">DBM Moins (-)</label>
+                                    {{ form.dbm_moins }}
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small text-success fw-bold">DBM Ajout (+)</label>
+                                    {{ form.dbm_ajout }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info d-flex justify-content-between align-items-center mb-0 border-0 rounded-4">
+                            <span class="fw-bold"><i class="fas fa-calculator me-2"></i>Budget Définitif estimé :</span>
+                            <span id="calc_definitif" class="h4 mb-0 fw-black">0 F CFA</span>
+                        </div>
+
+                        <div class="d-flex justify-content-between mt-4 pt-3 border-top">
+                            <a href="{% url 'budget_page' %}" class="btn btn-outline-secondary rounded-pill px-4">Annuler</a>
+                            <button type="submit" class="btn btn-primary rounded-pill px-5 shadow-sm">
+                                <i class="fas fa-save me-2"></i>Valider l'Allocation
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const primInput = document.querySelector('[name="budget_primitive"]');
+    const ajoutInput = document.querySelector('[name="dbm_ajout"]');
+    const moinsInput = document.querySelector('[name="dbm_moins"]');
+    const display = document.getElementById('calc_definitif');
+
+    function calculate() {
+        let res = (parseFloat(primInput.value) || 0) + (parseFloat(ajoutInput.value) || 0) - (parseFloat(moinsInput.value) || 0);
+        display.innerText = new Intl.NumberFormat('fr-FR').format(res) + " F CFA";
+    }
+
+    [primInput, ajoutInput, moinsInput].forEach(el => el.addEventListener('input', calculate));
+    window.onload = calculate; // Calcul au chargement
+</script>
+{% endblock %}

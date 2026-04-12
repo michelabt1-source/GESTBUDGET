@@ -1,6 +1,8 @@
 from django.contrib import admin
 from .models import DBM, IPM, AllocationBudget, AnneeEnCours, Attache, BonEngagement, BudgetCompare, BudgetMensuel, Chapitre, Cumul, Departement, Depense, DetailsDepense, DetailsEngagement, DetailsFacture, DetailsPayement, DetailsReception, DetailsRecette, DetailsTechnique, ExerciceBudgetaire, Facture, FicheControle, Fournisseur, Budget, MembresCommission, ModeReglement, Mois, NumComptePrincipal, Paiement, Pay, PeriodeRecette, PlanComptable, Reception, Recette, Produit, Role, Section, Services, SituationGeneralBugdet, Source, SousCompte, Stock, Technique, TypeBudget, TypesDeComptes, Unite, Utilisateur
-
+from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin
+from .models import Utilisateur, Role
 @admin.register(Paiement)
 class PaiementAdmin(admin.ModelAdmin):
     list_display = ('num_paiement', 'date_payement', 'annee_ex', 'objet_payement', 'valider_pay')
@@ -20,9 +22,9 @@ class FournisseurAdmin(admin.ModelAdmin):
 
 @admin.register(AllocationBudget)
 class AllocationBudgetAdmin(admin.ModelAdmin):
-    list_display = ('annee_ex', 'mois', 'comptes', 'budget_primitive')
+    list_display = ('sous_compte', 'budget_primitive', 'annee_ex', 'mois')
     list_filter = ('annee_ex', 'mois')
-
+    search_fields = ('sous_compte__num_sous_compte', 'sous_compte__libelle_sous_compte')
 @admin.register(Budget)
 class BudgetAdmin(admin.ModelAdmin):
    
@@ -169,11 +171,26 @@ class CumulAdmin(admin.ModelAdmin):
 @admin.register(Role)
 class RoleAdmin(admin.ModelAdmin):
     list_display = ('nom_role',)
+  
 
+
+
+# On enregistre ton modèle Utilisateur personnalisé
 @admin.register(Utilisateur)
-class UtilisateurAdmin(admin.ModelAdmin):
-    list_display = ('nom_user', 'role')
-    list_filter = ('role',)
+class CustomUserAdmin(UserAdmin):
+    # 1. Affiche les colonnes dans la liste (Capture 4)
+    list_display = ['username', 'email', 'role', 'service', 'is_staff']
+    
+    # 2. Ajoute les champs dans le formulaire de MODIFICATION
+    fieldsets = UserAdmin.fieldsets + (
+        ('Informations GCS', {'fields': ('role', 'service')}),
+    )
+
+    # 3. Ajoute les champs dans le formulaire de CRÉATION (Très important !)
+    add_fieldsets = UserAdmin.add_fieldsets + (
+        ('Informations GCS', {'fields': ('role', 'service')}),
+    )
+ 
 
 @admin.register(TypesDeComptes)
 class TypesDeComptesAdmin(admin.ModelAdmin):

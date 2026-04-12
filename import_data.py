@@ -2,6 +2,12 @@ import os
 import django
 import pandas as pd
 
+# 1. Configurer la variable d'environnement AVANT setup()
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'PROJETGCS.settings')
+
+# 2. Lancer setup
+django.setup()
+
 # 1. Configuration de l'environnement Django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'PROJETGCS.settings')
 django.setup()
@@ -61,22 +67,30 @@ def importer_utilisateurs():
             df = pd.read_excel(chemin)
             compteur = 0
             for _, row in df.iterrows():
-                nom = row['Utilisateur']
-                role_nom = row['Role'] if pd.notna(row['Role']) else "Utilisateur"
+                nom = str(row['Utilisateur']).strip() # On s'assure que c'est du texte propre
+                role_nom = str(row['Role']).strip() if pd.notna(row['Role']) else "Utilisateur"
+                mdp_brut = str(row['Mot de passe']) if pd.notna(row['Mot de passe']) else "1234"
                 
-                if pd.notna(nom):
-                    # On gère la création du rôle en amont pour la ForeignKey
+                if pd.notna(nom) and nom != "":
+                    # 1. Gestion du rôle
                     role_obj, _ = Role.objects.get_or_create(nom_role=role_nom)
                     
-                    _, created = Utilisateur.objects.get_or_create(
-                        nom_user=nom,
-                        role=role_obj,
+                    # 2. Vérification si l'utilisateur existe déjà via 'username'
+                    user_obj, created = Utilisateur.objects.get_or_create(
+                        username=nom,
                         defaults={
-                            'mot_de_passe': str(row['Mot de passe']) if pd.notna(row['Mot de passe']) else "1234"
+                            'role': role_obj,
+                            'is_staff': True if role_nom.lower() == "administrateur" else False
                         }
                     )
-                    if created: compteur += 1
-            print(f"✅ Utilisateurs : {compteur} nouveaux ajoutés.")
+                    
+                    if created:
+                        # 3. TRÈS IMPORTANT : Hachage du mot de passe
+                        user_obj.set_password(mdp_brut)
+                        user_obj.save()
+                        compteur += 1
+                        
+            print(f"✅ Utilisateurs : {compteur} nouveaux ajoutés (avec mots de passe hachés).")
         except Exception as e:
             print(f"❌ Erreur Utilisateurs : {e}")
 def importer_comptes_principaux():
