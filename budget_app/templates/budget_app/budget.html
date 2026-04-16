@@ -314,9 +314,9 @@
                     <div class="card border-0 shadow-sm rounded-4">
                         <div class="card-header bg-white py-3 d-flex justify-content-between">
                             <h6 class="fw-bold m-0 text-primary">Journal des Saisies D.B.M</h6>
-                            <button class="btn btn-primary btn-sm rounded-pill" data-bs-toggle="modal" data-bs-target="#newDbmModal">
-                                <i class="fas fa-plus me-1"></i> Nouveau Mouvement
-                            </button>
+                            <a href="{% url 'dbm_create' %}" class="btn btn-primary rounded-pill px-4 shadow-sm">
+    <i class="fas fa-plus me-2"></i>Nouveau Mouvement D.B.M
+</a>
                         </div>
                         <div class="table-responsive">
                             <table class="table table-hover align-middle mb-0">

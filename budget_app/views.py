@@ -1,9 +1,12 @@
 import json
+from django import forms
 from django.db.models.manager import BaseManager
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib.auth.decorators import login_required
-
-from budget_app.forms import AllocationForm
+from django.urls import reverse_lazy
+from django.views.generic import CreateView, ListView, DeleteView
+from django.urls import reverse_lazy
+from budget_app.forms import AllocationForm, DBMForm
 from budget_app.models import DBM, AllocationBudget, Fournisseur, MembresCommission, NumComptePrincipal, Produit, SousCompte, Unite, SituationGeneralBugdet
 
 @login_required
@@ -116,4 +119,30 @@ def allocation_delete(request, pk):
     return render(request, 'budget_app/allocation_confirm_delete.html', {
         'allocation': allocation,
     })
+def ajouter_dbm(request):
+    if request.method == 'POST':
+        form = DBMForm(request.POST)
+        if form.is_valid():
+            form.save() # Ici, le calcul dbm_moins / dbm_ajout se déclenche tout seul !
+            return redirect('liste_dbm') # Remplacez par le nom de votre URL de liste
+    else:
+        form = DBMForm()
+    
+    return render(request, 'budget_app/nouveau_dbm.html', {'form': form})
 
+class DBMCreateView(CreateView):
+    model = DBM
+    form_class = DBMForm
+    template_name = 'budget_app/dbm_form.html' # Le fichier que nous avons créé
+    success_url = reverse_lazy('dbm_list') # Redirection après succès
+
+class DBMListView(ListView):
+    model = DBM
+    template_name = 'budget_app/dbm_list.html'
+    context_object_name = 'mouvements'
+    ordering = ['-date_dbm']
+
+class DBMDeleteView(DeleteView):
+    model = DBM
+    template_name = 'budget_app/dbm_confirm_delete.html'
+    success_url = reverse_lazy('dbm_list')

@@ -1,5 +1,5 @@
 from django import forms
-from .models import AllocationBudget, SousCompte
+from .models import DBM, AllocationBudget, SousCompte
 
 class AllocationForm(forms.ModelForm):
     # 1. On garde tes choix pour les mois et années
@@ -53,3 +53,14 @@ class AllocationForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         # On force l'affichage du libellé complet dans le menu déroulant
         self.fields['sous_compte'].empty_label = "--- Sélectionner un compte ---"
+
+class DBMForm(forms.ModelForm):
+    class Meta:
+        model = DBM
+        fields = ['compte_source', 'compte_destinataire', 'montant_dbm', 'date_dbm']
+        widgets = {
+            'compte_source': forms.Select(attrs={'class': 'form-select select2'}),
+            'compte_destinataire': forms.Select(attrs={'class': 'form-select select2'}),
+            'montant_dbm': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'date_dbm': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+        }

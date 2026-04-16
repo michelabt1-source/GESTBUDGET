@@ -1,0 +1,84 @@
+{% extends 'budget_app/base.html' %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="card-header bg-indigo py-3" style="background-color: #6610f2;">
+                    <h5 class="mb-0 text-white"><i class="fas fa-exchange-alt me-2"></i>Nouveau Mouvement D.B.M</h5>
+                </div>
+                <div class="card-body p-4">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold small text-uppercase text-danger">Compte Source (Débit -)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light text-danger"><i class="fas fa-minus-circle"></i></span>
+                                    {{ form.compte_source }}
+                                </div>
+                                <div class="form-text text-muted small">Le crédit sera retiré de ce compte.</div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold small text-uppercase text-success">Compte Destination (Crédit +)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light text-success"><i class="fas fa-plus-circle"></i></span>
+                                    {{ form.compte_destinataire }}
+                                </div>
+                                <div class="form-text text-muted small">Le crédit sera ajouté à ce compte.</div>
+                            </div>
+                        </div>
+
+                        <div class="p-4 rounded-4 bg-light mb-4 border-start border-indigo border-4">
+                            <div class="row g-3 align-items-center">
+                                <div class="col-md-8">
+                                    <label class="form-label fw-bold text-dark">Montant du Transfert (F CFA)</label>
+                                    <div class="input-group input-group-lg">
+                                        {{ form.montant_dbm }}
+                                        <span class="input-group-text fw-bold">F CFA</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold small text-uppercase">Date du Mouvement</label>
+                                    {{ form.date_dbm }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-warning d-flex justify-content-between align-items-center mb-0 border-0 rounded-4">
+                            <div>
+                                <i class="fas fa-info-circle me-2"></i>
+                                <span class="fw-bold">Impact Budgétaire :</span>
+                            </div>
+                            <span id="calc_transfert" class="h4 mb-0 fw-black text-dark">0 F CFA</span>
+                        </div>
+
+                        <div class="d-flex justify-content-between mt-4 pt-3 border-top">
+                            <a href="{% url 'dbm_list' %}" class="btn btn-outline-secondary rounded-pill px-4">Annuler</a>
+                            <button type="submit" class="btn btn-indigo rounded-pill px-5 shadow-sm text-white" style="background-color: #6610f2;">
+                                <i class="fas fa-check-double me-2"></i>Valider le Transfert
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const montantInput = document.querySelector('[name="montant_dbm"]');
+    const display = document.getElementById('calc_transfert');
+
+    function updateDisplay() {
+        let val = parseFloat(montantInput.value) || 0;
+        display.innerText = new Intl.NumberFormat('fr-FR').format(val) + " F CFA";
+    }
+
+    montantInput.addEventListener('input', updateDisplay);
+    window.onload = updateDisplay;
+</script>
+{% endblock %}

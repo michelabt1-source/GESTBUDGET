@@ -1,4 +1,4 @@
-from django.db import models
+from django.db import models, transaction    
 from django.contrib.auth.models import AbstractUser
 class Produit(models.Model):
     compte = models.CharField(max_length=100, verbose_name="Compte")
@@ -342,20 +342,38 @@ class DetailsReception(models.Model):
 # --- DÉCISIONS BUDGÉTAIRES MODIFICATIVES ---
 
 class DBM(models.Model):
-    budget_ligne = models.ForeignKey('Budget', on_delete=models.SET_NULL, null=True, blank=True, verbose_name="IDbudget")
-    
-    date_dbm = models.DateField(verbose_name="Date DBM", null=True, blank=True)
-    montant_dbm = models.DecimalField(max_digits=18, decimal_places=2, verbose_name="Montant DBM", default=0)
-    comptes_de = models.CharField(max_length=50, verbose_name="Comptes d'origine", default="")
-    compte_fi = models.CharField(max_length=50, verbose_name="Comptes destinataire", default="")
-    annee_ex = models.CharField(max_length=50, verbose_name="Année_EX", default="")
+    compte_source = models.ForeignKey(
+        'AllocationBudget',
+        on_delete=models.CASCADE,
+        related_name='virements_sortants',
+        null=True,
+        blank=True,
+    )
+    compte_destinataire = models.ForeignKey(
+        'AllocationBudget',
+        on_delete=models.CASCADE,
+        related_name='virements_entrants',
+        null=True,
+        blank=True,
+    )
+    montant_dbm = models.DecimalField(max_digits=18, decimal_places=2)
+    date_dbm = models.DateField()
+    annee_ex = models.CharField(max_length=50, verbose_name="Code_EX", default="")
+    motif = models.CharField(max_length=255, verbose_name="Motif", default="")
+    def save(self, *args, **kwargs):
+        # Utilisation d'une transaction pour être sûr que les deux côtés sont mis à jour
+        with transaction.atomic():
+            # 1. On augmente le 'dbm_moins' du compte qui donne l'argent
+            if self.compte_source:
+                self.compte_source.dbm_moins += self.montant_dbm
+                self.compte_source.save()
 
-    def __str__(self):
-        return f"DBM {self.annee_ex} - {self.montant_dbm} ({self.comptes_de} -> {self.compte_fi})"
+            # 2. On augmente le 'dbm_ajout' du compte qui reçoit l'argent
+            if self.compte_destinataire:
+                self.compte_destinataire.dbm_ajout += self.montant_dbm
+                self.compte_destinataire.save()
 
-    class Meta:
-        verbose_name = "DBM"
-        verbose_name_plural = "DBMs"
+            super().save(*args, **kwargs)
 
 # --- TABLES DE NOMENCLATURE ET PARAMÉTRAGE ---
 
@@ -456,7 +474,7 @@ class SousCompte(models.Model):
     )
 
     def __str__(self):
-        return f"{self.num_sous_compte} - {self.libelle_sous_compte}"
+          return f"{self.num_sous_compte} - {self.libelle_sous_compte}"
    
     
 # --- TABLES DE RÉFÉRENCES SUPPLÉMENTAIRES ---

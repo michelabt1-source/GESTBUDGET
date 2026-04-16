@@ -3,60 +3,87 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GCS | Analyse Budgétaire</title>
+    <title>GCS | Intelligence Budgétaire</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
     <style>
         :root {
-            --sidebar-width: 260px;
-            --top-height: 70px;
-            --sidebar-bg: #0b1a31;
-            --sidebar-hover: #1a2d4d;
-            --accent-green: #10b981;
+            --sidebar-width: 280px;
+            --top-height: 80px;
+            --gcs-navy: #0f172a;
+            --gcs-accent: #10b981; /* Vert Émeraude Premium */
+            --gcs-indigo: #6366f1;
+            --gcs-bg: #f8fafc;
+            --glass-bg: rgba(255, 255, 255, 0.85);
         }
 
         body { 
-            font-family: 'Inter', sans-serif; 
-            background-color: #f8fafc; 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background-color: var(--gcs-bg); 
+            color: #334155;
             margin: 0; 
             height: 100vh;
-            overflow: hidden; /* Bloque le scroll du body */
+            overflow: hidden;
         }
 
-        /* Sidebar Fixe */
+        /* --- SIDEBAR PREMIUM --- */
         .sidebar {
             width: var(--sidebar-width);
             height: 100vh;
-            background-color: var(--sidebar-bg);
+            background-color: var(--gcs-navy);
             position: fixed;
             left: 0; top: 0;
-            z-index: 1000;
+            z-index: 1050;
+            box-shadow: 10px 0 30px rgba(0,0,0,0.1);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .sidebar-brand {
-            padding: 25px 20px;
+            padding: 30px 25px;
             color: white;
-            font-weight: 700;
-            font-size: 1.2rem;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
+            font-weight: 800;
+            font-size: 1.4rem;
+            letter-spacing: -1px;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
         }
 
         .nav-link {
             color: #94a3b8;
-            padding: 14px 25px;
-            transition: all 0.2s;
-            border-left: 4px solid transparent;
+            padding: 14px 22px;
+            margin: 4px 15px;
+            border-radius: 12px;
+            font-weight: 500;
+            font-size: 0.95rem;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
         }
 
-        .nav-link:hover, .nav-link.active {
+        .nav-link i { 
+            font-size: 1.1rem; 
+            width: 28px; 
+            transition: transform 0.3s;
+        }
+
+        .nav-link:hover {
             color: white;
-            background-color: var(--sidebar-hover);
-            border-left: 4px solid var(--accent-green);
+            background: rgba(255,255,255,0.05);
+            transform: translateX(5px);
         }
 
-        /* Wrapper à droite */
+        .nav-link.active {
+            color: white;
+            background: var(--gcs-accent);
+            box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.3);
+        }
+
+        .nav-link.active i { transform: scale(1.1); }
+
+        /* --- MAIN LAYOUT --- */
         .main-wrapper {
             margin-left: var(--sidebar-width);
             width: calc(100% - var(--sidebar-width));
@@ -67,107 +94,134 @@
 
         .top-header {
             height: var(--top-height);
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid #e2e8f0;
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(226, 232, 240, 0.8);
             display: flex;
             align-items: center;
             justify-content: space-between;
             padding: 0 40px;
-            flex-shrink: 0;
+            z-index: 1000;
         }
 
         .content-body {
             flex-grow: 1;
-            overflow-y: auto; /* Seule cette zone scrolle verticalement */
-            padding: 30px 40px;
-        }
-        .header-title h5 { 
-            font-weight: 800; 
-            color: var(--gcs-navy);
-            letter-spacing: -0.5px;
+            overflow-y: auto;
+            padding: 35px 45px;
+            scroll-behavior: smooth;
         }
 
-        /* Modifie cette partie dans base.html */
-.card-custom {
-    background: white;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 24px;
-    height: auto;    /* Ajoute ceci à la place */
-    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-    margin-bottom: 20px; /* Un peu d'espace en bas */
-}
-.user-pill {
-            background: #f1f5f9;
-            padding: 6px 18px;
-            border-radius: 50px;
+        /* --- CARDS & UI COMPONENTS --- */
+        .card-custom {
+            background: white;
+            border: 1px solid rgba(226, 232, 240, 0.6);
+            border-radius: 20px;
+            padding: 28px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .card-custom:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.06);
+        }
+
+        /* --- USER PROFILE PILL --- */
+        .user-pill {
+            background: white;
+            padding: 8px 8px 8px 20px;
+            border-radius: 16px;
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 15px;
             border: 1px solid #e2e8f0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.04);
         }
-.user-avatar {
-            width: 40px;
-            height: 40px;
-            background: var(--gcs-navy);
+
+        .user-avatar {
+            width: 44px; height: 44px;
+            background: linear-gradient(135deg, var(--gcs-navy), #1e293b);
             color: var(--gcs-accent);
-            border-radius: 50%;
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: 700;
-            border: 2px solid white;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            font-weight: 800;
+            font-size: 1.1rem;
         }
 
-        .kpi-label { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; color: #64748b; }
-        .kpi-value { font-size: 1.6rem; font-weight: 700; color: #1e293b; margin: 5px 0; }
-        
-        .icon-circle {
-            width: 48px; height: 48px; border-radius: 10px;
-            display: flex; align-items: center; justify-content: center; font-size: 1.2rem;
+        /* --- BADGES & TAGS --- */
+        .bg-soft-success { background: #dcfce7 !important; color: #15803d !important; }
+        .bg-soft-primary { background: #dbeafe !important; color: #1d4ed8 !important; }
+        .bg-soft-danger { background: #fee2e2 !important; color: #b91c1c !important; }
+
+        .btn-primary {
+            background: var(--gcs-accent);
+            border: none;
+            padding: 10px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
         }
-        .bg-soft-primary { background: #eff6ff; color: #3b82f6; }
-        .bg-soft-danger { background: #fef2f2; color: #ef4444; }
-        .bg-soft-success { background: #ecfdf5; color: #10b981; }
+
+        .btn-primary:hover {
+            background: #059669;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(16, 185, 129, 0.3);
+        }
+
+        /* Custom Scrollbar */
+        .content-body::-webkit-scrollbar { width: 6px; }
+        .content-body::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     </style>
 </head>
 <body>
 
     <nav class="sidebar">
         <div class="sidebar-brand">
-            <i class="fas fa-chart-pie text-success me-2"></i>GCS BUDGET
+            <div class="me-3 d-flex align-items-center justify-content-center" style="width:40px; height:40px; background: var(--gcs-accent); border-radius: 10px;">
+                <i class="fas fa-chart-line text-white fs-5"></i>
+            </div>
+            <span>GCS BUDGET</span>
         </div>
-        <div class="mt-3">
+        <div class="mt-4">
             <ul class="nav flex-column">
-                <li class="nav-item"><a class="nav-link active" href="{% url 'home' %}"><i class="fas fa-th-large me-2"></i> Accueil</a></li>
-                <li class="nav-item"><a class="nav-link" href="{% url 'structure_page' %}"><i class="fas fa-sitemap me-2"></i> Structure</a></li>
-                <li class="nav-item"><a class="nav-link" href="{% url 'budget_page' %}"><i class="fas fa-layer-group me-2"></i> Budget</a></li>
-                <li class="nav-item"><a class="nav-link" href="#"><i class="fas fa-exchange-alt me-2"></i> Opérations</a></li>
-                <li class="nav-item"><a class="nav-link" href="#"><i class="fas fa-file-contract me-2"></i> États</a></li>
-                <li class="nav-item"><a class="nav-link" href="#"><i class="fas fa-file-contract me-2"></i> Configuration</a></li>
-
+                <li class="nav-item"><a class="nav-link active" href="{% url 'home' %}"><i class="fas fa-grid-2 me-2"></i> <span class="ms-2">Vue d'ensemble</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="{% url 'structure_page' %}"><i class="fas fa-sitemap me-2"></i> <span class="ms-2">Plan Comptable</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="{% url 'budget_page' %}"><i class="fas fa-wallet me-2"></i> <span class="ms-2">Gestion Budget</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="{% url 'dbm_list' %}"><i class="fas fa-sync-alt me-2"></i> <span class="ms-2">Opérations D.B.M</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="#"><i class="fas fa-file-invoice me-2"></i> <span class="ms-2">Rapports & États</span></a></li>
+                <li class="nav-item mt-4"><hr class="mx-3" style="border-color: rgba(255,255,255,0.1);"></li>
+                <li class="nav-item"><a class="nav-link" href="#"><i class="fas fa-cog me-2"></i> <span class="ms-2">Paramètres</span></a></li>
             </ul>
         </div>
     </nav>
 
-<div class="main-wrapper">
+    <div class="main-wrapper">
         <header class="top-header">
             <div class="header-title">
-                <h5 class="m-0">Tableau de Bord</h5>
-                <p class="text-muted small m-0"><i class="fas fa-circle text-success me-1" style="font-size: 8px;"></i> Suivi en temps réel</p>
+                <h4 class="m-0 fw-800" style="color: #1e293b; letter-spacing: -0.5px;">{% block header_title %}Tableau de Bord{% endblock %}</h4>
+                <div class="d-flex align-items-center mt-1">
+                    <span class="badge bg-soft-success d-flex align-items-center" style="font-size: 0.65rem;">
+                        <i class="fas fa-shield-check me-1"></i> SYSTÈME SÉCURISÉ
+                    </span>
+                </div>
             </div>
             
-            <div class="d-flex align-items-center">
+            <div class="d-flex align-items-center gap-4">
+                <div class="position-relative me-2">
+                    <i class="far fa-bell fs-5 text-muted" style="cursor:pointer;"></i>
+                    <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle"></span>
+                </div>
+
                 <div class="user-pill">
                     <div class="text-end">
-                        <div class="fw-bold small text-dark" style="line-height: 1;">{{ user.username|upper }}</div>
-                        <div class="text-muted" style="font-size: 0.7rem;">{{ user.role.nom_role|default:"Utilisateur" }}</div>
-                        <form action="{% url 'logout' %}" method="post" class="d-inline">
+                        <div class="fw-bold small text-dark" style="font-size: 0.85rem;">{{ user.username|upper }}</div>
+                        <form action="{% url 'logout' %}" method="post" class="m-0 p-0">
                             {% csrf_token %}
-                            <button type="submit" class="btn btn-link p-0 text-danger fw-bold" style="font-size: 0.65rem; text-decoration: none;">
-                                Déconnexion
+                            <button type="submit" class="btn btn-link p-0 text-muted" style="font-size: 0.7rem; text-decoration: none; border:none;">
+                                <i class="fas fa-sign-out-alt me-1"></i> Déconnexion
                             </button>
                         </form>
                     </div>

@@ -149,13 +149,14 @@ def importer_allocations():
             df = pd.read_excel(chemin)
             compteur = 0
             for _, row in df.iterrows():
-                # On identifie l'allocation par le compte, l'année et le libellé
+                # On utilise 'num_sous_compte' au lieu de 'comptes'
                 compte_val = str(row['Comptes']) if pd.notna(row['Comptes']) else ""
                 annee_val = str(row['Code_EX']) if pd.notna(row['Code_EX']) else ""
                 
                 if compte_val and annee_val:
+                    # Correction ici : 'num_sous_compte' doit être utilisé
                     _, created = AllocationBudget.objects.get_or_create(
-                        comptes=compte_val,
+                        num_sous_compte=compte_val, # Changé de 'comptes' à 'num_sous_compte'
                         annee_ex=annee_val,
                         libelle_sous_compte=row['Libellé'] if pd.notna(row['Libellé']) else "",
                         defaults={
@@ -166,7 +167,7 @@ def importer_allocations():
                             'dbm_moins': Decimal(str(row['DBM_Moins'])) if pd.notna(row['DBM_Moins']) else 0,
                             'dbm_ajout': Decimal(str(row['DBM_Ajout'])) if pd.notna(row['DBM_Ajout']) else 0,
                             'nom_attache': str(row['Num_attaché']) if pd.notna(row['Num_attaché']) else "",
-                            'mois': "Janvier", # Par défaut si la colonne mois est absente de l'Excel
+                            'mois': "Janvier", 
                         }
                     )
                     if created: compteur += 1
@@ -269,29 +270,77 @@ def importer_depenses():
 
 def importer_dbm():
     chemin = r'table windev/Table DBM.xlsx'
-    if os.path.exists(chemin):
-        try:
-            df = pd.read_excel(chemin)
-            compteur = 0
-            for _, row in df.iterrows():
-                # On identifie la DBM par la date, le montant et les comptes concernés
-                date_d = row['Date_DBM'] if pd.notna(row['Date_DBM']) else None
-                montant = Decimal(str(row['Montant_DBM'])) if pd.notna(row['Montant_DBM']) else 0
-                
-                if pd.notna(row["Comptes d'origine"]):
-                    _, created = DBM.objects.get_or_create(
-                        date_dbm=date_d,
-                        montant_dbm=montant,
-                        comptes_de=str(row["Comptes d'origine"]),
-                        compte_fi=str(row['Comptes destinateur']),
-                        defaults={
-                            'annee_ex': str(row['Année AnnéeCours']) if pd.notna(row['Année AnnéeCours']) else "2025",
-                        }
-                    )
-                    if created: compteur += 1
-            print(f"✅ DBM (Décisions Budgétaires Modificatives) : {compteur} nouvelles ajoutées.")
-        except Exception as e:
-            print(f"❌ Erreur DBM : {e}")
+    if not os.path.exists(chemin):
+        print(f"⚠️ Fichier introuvable : {chemin}")
+        return
+
+    def normalize_code(value):
+        if pd.isna(value):
+            return ""
+        code = str(value).strip()
+        if code.endswith(".0"):
+            code = code[:-2]
+        return code
+
+    try:
+        df = pd.read_excel(chemin)
+        allocations = AllocationBudget.objects.all()
+        allocations_by_sous = {
+            str(a.num_sous_compte).strip(): a
+            for a in allocations
+            if a.num_sous_compte
+        }
+        allocations_by_principal = {
+            str(a.num_compte_principal).strip(): a
+            for a in allocations
+            if a.num_compte_principal
+        }
+
+        compteur = 0
+        skipped = 0
+
+        for _, row in df.iterrows():
+            date_d = row.get("Date_DBM") if pd.notna(row.get("Date_DBM")) else None
+            montant = (
+                Decimal(str(row["Montant_DBM"]))
+                if pd.notna(row.get("Montant_DBM"))
+                else Decimal("0")
+            )
+
+            source_code = normalize_code(row.get("Comptes d'origine"))
+            dest_code = normalize_code(row.get("Comptes destinateur"))
+
+            if not source_code or not dest_code:
+                skipped += 1
+                continue
+
+            source = allocations_by_sous.get(source_code) or allocations_by_principal.get(source_code)
+            dest = allocations_by_sous.get(dest_code) or allocations_by_principal.get(dest_code)
+
+            if source is None or dest is None:
+                skipped += 1
+                continue
+
+            _, created = DBM.objects.get_or_create(
+                date_dbm=date_d,
+                montant_dbm=montant,
+                compte_source=source,
+                compte_destinataire=dest,
+                defaults={
+                    "annee_ex": str(row.get("Année AnnéeCours")).strip()
+                    if pd.notna(row.get("Année AnnéeCours"))
+                    else "2025",
+                },
+            )
+            if created:
+                compteur += 1
+
+        print(
+            f"✅ DBM (Décisions Budgétaires Modificatives) : {compteur} nouvelles ajoutées."
+            + (f" {skipped} lignes ignorées." if skipped else "")
+        )
+    except Exception as e:
+        print(f"❌ Erreur DBM : {e}")
 def importer_fournisseurs():
     chemin = r'table windev/Table Fournisseur.xlsx'
     if os.path.exists(chemin):

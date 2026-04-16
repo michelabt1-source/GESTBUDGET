@@ -98,11 +98,6 @@ class DetailsReceptionAdmin(admin.ModelAdmin):
     list_display = ('designation', 'quantite_reception', 'montant_ttc', 'budget_ligne')
     list_filter = ('budget_ligne',)
 
-@admin.register(DBM)
-class DBMAdmin(admin.ModelAdmin):
-    list_display = ('date_dbm', 'comptes_de', 'compte_fi', 'montant_dbm', 'annee_ex')
-    list_filter = ('annee_ex', 'date_dbm')
-    search_fields = ('comptes_de', 'compte_fi')
 
 @admin.register(Chapitre)
 class ChapitreAdmin(admin.ModelAdmin):
