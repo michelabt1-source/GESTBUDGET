@@ -1,0 +1,406 @@
+{% extends 'budget_app/base.html' %}
+
+{% block content %}
+<div class="container-fluid py-4 px-2 px-md-3">
+    <div class="row justify-content-center">
+        <div class="col-12">
+            <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="card-header bg-indigo py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 text-white">
+                        <i class="fas fa-file-signature me-2"></i>Nouvel Engagement des Matières
+                    </h5>
+                    <span class="badge bg-white text-indigo rounded-pill px-3">Exercice 2026</span>
+                </div>
+
+                {% if form.instance.pk %}
+                <div class="bg-light border-bottom p-3 d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="small fw-bold text-muted">Statut :</span>
+                        {% if form.instance.valide %}
+                            <span class="badge bg-success ms-2">Validé</span>
+                        {% else %}
+                            <span class="badge bg-warning ms-2">Non validé</span>
+                        {% endif %}
+                    </div>
+                    <div class="d-flex gap-2">
+                        <a href="{% url 'engagement_print' form.instance.pk %}" class="btn btn-sm btn-outline-info">
+                            <i class="fas fa-print me-1"></i>Imprimer Engagement
+                        </a>
+                        <a href="{% url 'engagement_print_commande' form.instance.pk %}" class="btn btn-sm btn-outline-info">
+                            <i class="fas fa-file me-1"></i>Bon de Commande
+                        </a>
+                        {% if form.instance.valide %}
+                            <a href="{% url 'engagement_devalidate' form.instance.pk %}" class="btn btn-sm btn-outline-warning">
+                                <i class="fas fa-times-circle me-1"></i>Dévalider
+                            </a>
+                        {% else %}
+                            <a href="{% url 'engagement_validate' form.instance.pk %}" class="btn btn-sm btn-outline-success">
+                                <i class="fas fa-check-circle me-1"></i>Valider
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="card-body p-4">
+                    <form method="post" id="engagement-form">
+                        {% csrf_token %}
+                        
+                        {# ✅ management_form ici UNE SEULE FOIS #}
+                        {{ formset.management_form }}
+
+                        {# ✅ Bloc erreurs correctement fermé #}
+                        {% if form.errors or formset.errors %}
+                        <div class="alert alert-danger shadow-sm rounded-4 mb-3">
+                            <h6 class="fw-bold"><i class="fas fa-exclamation-triangle me-2"></i>Des champs sont manquants ou incorrects</h6>
+                            {% if form.errors %}
+                                <ul class="mb-1">
+                                    {% for field, errors in form.errors.items %}
+                                        <li><strong>{{ field }}</strong> : {{ errors|join:", " }}</li>
+                                    {% endfor %}
+                                </ul>
+                            {% endif %}
+                            {% if formset.non_form_errors %}
+                                <small>{{ formset.non_form_errors }}</small>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+
+                        {# ===== EN-TÊTE DU BON ===== #}
+                        <div class="p-4 rounded-4 bg-light mb-4 border-start border-indigo border-4">
+                            <div class="row g-3">
+                                <div class="col-md-2">
+                                    <label class="form-label fw-bold small text-uppercase text-indigo">N° Bon</label>
+                                    {{ form.num_bon_engagement }}
+                                </div>  
+                                <div class="col-md-2">
+                                    <label class="form-label fw-bold small text-uppercase text-indigo">Date Engagement</label>
+                                    {{ form.date_engagement }}
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label fw-bold small text-uppercase text-indigo">Année EX</label>
+                                    {{ form.annee_ex }}
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold small text-uppercase text-indigo">Fournisseur</label>
+                                    {{ form.fournisseur }}
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold small text-uppercase text-indigo">Compte Budgétaire</label>
+                                    {{ form.comptes }}
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label fw-bold small text-uppercase text-muted">Réf. Pièces</label>
+                                    {{ form.reference_pieces }}
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold small text-uppercase text-muted">Service Demandeur</label>
+                                    {{ form.nom_service }}
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold small text-uppercase text-muted">Totalisateur</label>
+                                    {{ form.nom_totalisateur }}
+                                </div>
+                                <div class="col-md-12">
+                                    <label class="form-label fw-bold small text-uppercase text-muted">Objet de l'Engagement</label>
+                                    {{ form.objet_engagement }}
+                                </div>
+                            </div>
+                        </div>
+
+                        {# ===== TABLEAU DES DÉTAILS ===== #}
+                        <div class="mb-4">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="fw-bold text-dark mb-0">
+                                    <i class="fas fa-list me-2"></i>Détails des articles
+                                </h6>
+                                <button type="button" id="add-row-btn" class="btn btn-sm btn-outline-indigo rounded-pill px-3">
+                                    <i class="fas fa-plus me-1"></i>Ajouter une ligne
+                                </button>
+                            </div>
+                            <div class="table-responsive rounded-3 border">
+                                <table class="table table-sm table-hover mb-0 align-middle">
+                                    <thead class="bg-indigo text-white small fw-bold sticky-top">
+                                        <tr>
+                                            <th style="width:10%">Compte</th>
+                                            <th style="width:20%">Désignation</th>
+                                            <th style="width:12%">Spécification</th>
+                                            <th style="width:8%">Qté</th>
+                                            <th style="width:10%">P.U HT</th>
+                                            <th style="width:10%">P.U TTC</th>
+                                            <th style="width:14%">Total TTC</th>
+                                            <th style="width:10%">Obs.</th>
+                                            <th style="width:6%" class="text-center"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="formset-container">
+                                        {# ✅ UNE SEULE boucle, champs hidden inclus #}
+                                        {% for subform in formset %}
+                                        <tr class="formset-row">
+                                            {% for hidden in subform.hidden_fields %}{{ hidden }}{% endfor %}
+                                            <td style="padding:4px">{{ subform.compte }}</td>
+                                            <td style="padding:4px">{{ subform.designation }}</td>
+                                            <td style="padding:4px">{{ subform.specification }}</td>
+                                            <td style="padding:4px">{{ subform.quantite_engagement }}</td>
+                                            <td style="padding:4px">{{ subform.prix_unitaire_ht }}</td>
+                                            <td style="padding:4px">{{ subform.prix_unitaire_ttc }}</td>
+                                            <td style="padding:4px">
+                                                <input type="text" class="form-control form-control-sm fw-bold text-indigo line-total text-center" value="0 F CFA" readonly>
+                                            </td>
+                                            <td style="padding:4px">{{ subform.observation }}</td>
+                                            <td style="padding:4px" class="text-center">
+                                                <div class="d-flex justify-content-center gap-1">
+                                                    <button type="button" class="btn btn-sm btn-indigo text-white btn-search-produit p-1" title="Chercher" style="width:28px;height:28px">
+                                                        <i class="fas fa-search fa-xs"></i>
+                                                    </button>
+                                                    <button type="button" class="btn btn-sm btn-link text-danger remove-row p-1" title="Supprimer" style="width:28px;height:28px">
+                                                        <i class="fas fa-trash-alt fa-xs"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        {# ===== TOTAL ===== #}
+                        <div class="alert alert-warning d-flex justify-content-between align-items-center mb-4 border-0 rounded-4 p-4 shadow-sm">
+                            <div>
+                                <i class="fas fa-calculator fa-2x me-3 text-warning"></i>
+                                <span class="h5 mb-0 fw-bold text-dark">Montant Total :</span>
+                            </div>
+                            <div class="text-end">
+                                <span id="total_engagement_display" class="h2 mb-0 fw-black text-indigo">0 F CFA</span>
+                                <div class="small text-muted fw-bold">
+                                    <span id="total_articles_count">0</span> article(s) saisi(s)
+                                </div>
+                            </div>
+                        </div>
+
+                        {# ===== BOUTONS ===== #}
+                        <div class="d-flex justify-content-between pt-3 border-top">
+                            <a href="{% url 'engagement_list' %}" class="btn btn-outline-secondary rounded-pill px-4">Annuler</a>
+                            <div class="d-flex gap-2 align-items-center">
+                                <div class="form-check form-switch mt-1 me-3">
+                                    {{ form.valide }}
+                                    <label class="form-check-label small fw-bold">Valider maintenant</label>
+                                </div>
+                                <button type="submit" class="btn btn-indigo rounded-pill px-5 shadow-sm text-white">
+                                    <i class="fas fa-save me-2"></i>Enregistrer l'Engagement
+                                </button>
+                            </div>
+                        </div>
+                        <input type="hidden" name="nombre_articles" id="id_nombre_articles" value="0">
+                        <input type="hidden" name="montant_engagement" id="id_montant_engagement" value="0">
+                        <input type="hidden" name="montant_inscrit" id="id_montant_inscrit" value="0">
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ===== MODALE CATALOGUE PRODUITS ===== #}
+<div class="modal fade" id="produitModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content rounded-4 shadow">
+            <div class="modal-header bg-indigo text-white">
+                <h5 class="modal-title"><i class="fas fa-box-open me-2"></i>Catalogue des Produits</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-indigo text-white small fw-bold sticky-top">
+                            <tr>
+                                <th class="ps-3">Compte</th>
+                                <th>Désignation</th>
+                                <th>Spécification</th>
+                                <th>Unité</th>
+                                <th>Observation</th>
+                                <th class="text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in tous_les_produits %}
+                            <tr>
+                                <td class="ps-3 fw-bold text-indigo">{{ p.compte }}</td>
+                                <td>{{ p.designation }}</td>
+                                <td class="small text-muted">{{ p.specification|truncatewords:5 }}</td>
+                                <td class="small">{{ p.unite }}</td>
+                                <td class="small text-muted">{{ p.observation|truncatewords:3 }}</td>
+                                <td class="text-center">
+                                    <button type="button" class="btn btn-sm btn-indigo text-white rounded-pill px-3 select-this-produit"
+                                            data-compte="{{ p.compte }}"
+                                            data-designation="{{ p.designation }}"
+                                            data-unite="{{ p.unite }}"
+                                            data-specification="{{ p.specification }}"
+                                            data-observation="{{ p.observation }}">
+                                        <i class="fas fa-check me-1"></i>Choisir
+                                    </button>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center py-4 text-muted">
+                                    <i class="fas fa-inbox me-2"></i>Aucun produit dans le catalogue.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bg-indigo { background-color: #6610f2 !important; }
+    .text-indigo { color: #6610f2 !important; }
+    .btn-indigo { background-color: #6610f2; border-color: #6610f2; }
+    .btn-indigo:hover { background-color: #520dc2; border-color: #520dc2; color: white; }
+    .border-indigo { border-color: #6610f2 !important; }
+    .btn-outline-indigo { border-color: #6610f2; color: #6610f2; }
+    .btn-outline-indigo:hover { background-color: #6610f2; color: white; }
+    .fw-black { font-weight: 900; }
+    .formset-row td { padding: 3px !important; vertical-align: middle; }
+    .formset-row .form-control,
+    .formset-row input[type="text"],
+    .formset-row input[type="number"] {
+        width: 100%; height: 32px; padding: 4px 8px;
+        font-size: 0.875rem; border-radius: 4px;
+    }
+</style>
+
+<script>
+let rowToFill = null;
+let produitModal = null;
+const TVA_RATE = 0.18;
+
+function updateTotals() {
+    let grandTotal = 0;
+    let count = 0;
+
+    document.querySelectorAll('#formset-container .formset-row').forEach(row => {
+        // Ignorer les lignes marquées DELETE
+        const deleteCheck = row.querySelector('[name$="-DELETE"]');
+        if (deleteCheck && deleteCheck.checked) return;
+
+        const prixHtField  = row.querySelector('[name$="-prix_unitaire_ht"]');
+        const prixTtcField = row.querySelector('[name$="-prix_unitaire_ttc"]');
+        const qtyField     = row.querySelector('[name$="-quantite_engagement"]');
+        const lineTotalField = row.querySelector('.line-total');
+
+        if (!prixHtField || !prixTtcField || !qtyField) return;
+
+        const prixHt = parseFloat(prixHtField.value) || 0;
+        const qty    = parseFloat(qtyField.value) || 0;
+
+        // Auto-calcul TTC depuis HT
+        if (prixHt > 0 && (parseFloat(prixTtcField.value) || 0) === 0) {
+            prixTtcField.value = (prixHt * (1 + TVA_RATE)).toFixed(2);
+        }
+
+        const pu = parseFloat(prixTtcField.value) || 0;
+        const lineTotal = qty * pu;
+
+        if (lineTotalField) {
+            lineTotalField.value = new Intl.NumberFormat('fr-FR').format(lineTotal) + " F CFA";
+        }
+
+        grandTotal += lineTotal;
+        if (qty > 0) count++;
+    });
+
+    document.getElementById('total_engagement_display').innerText =
+        new Intl.NumberFormat('fr-FR').format(grandTotal) + " F CFA";
+    document.getElementById('total_articles_count').innerText = count;
+}
+
+// ✅ Ajout dynamique d'une ligne
+function addFormsetRow() {
+    const container = document.getElementById('formset-container');
+    const totalForms = document.getElementById('id_detailsengagement_set-TOTAL_FORMS');
+    const formNum = parseInt(totalForms.value);
+
+    // Cloner la première ligne comme template
+    const firstRow = container.querySelector('.formset-row');
+    const newRow = firstRow.cloneNode(true);
+
+    // Mettre à jour les indices (0 -> formNum)
+    newRow.innerHTML = newRow.innerHTML.replaceAll(`-0-`, `-${formNum}-`);
+
+    // Vider les valeurs
+    newRow.querySelectorAll('input:not([type=hidden])').forEach(i => i.value = '');
+    newRow.querySelectorAll('.line-total').forEach(i => i.value = '0 F CFA');
+
+    container.appendChild(newRow);
+    totalForms.value = formNum + 1;
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    produitModal = new bootstrap.Modal(document.getElementById('produitModal'));
+    const container = document.getElementById('formset-container');
+
+    // Mise à jour auto de l'année
+    const dateField = document.querySelector('[name="date_engagement"]');
+    const anneeField = document.querySelector('[name="annee_ex"]');
+    if (dateField && anneeField) {
+        dateField.addEventListener('change', function () {
+            if (this.value) anneeField.value = new Date(this.value).getFullYear();
+        });
+    }
+
+    // Calculs en temps réel
+    container.addEventListener('input', updateTotals);
+
+    // Bouton Ajouter ligne
+    document.getElementById('add-row-btn').addEventListener('click', addFormsetRow);
+
+    // Supprimer une ligne
+    container.addEventListener('click', function (e) {
+        const btn = e.target.closest('.remove-row');
+        if (btn) {
+            const row = btn.closest('.formset-row');
+            const deleteInput = row.querySelector('[name$="-DELETE"]');
+            if (deleteInput) {
+                // Django formset : cocher DELETE au lieu de supprimer le DOM
+                deleteInput.checked = true;
+                row.style.display = 'none';
+            } else if (container.querySelectorAll('.formset-row').length > 1) {
+                row.remove();
+            }
+            updateTotals();
+        }
+    });
+
+    // Ouvrir la modale catalogue
+    container.addEventListener('click', function (e) {
+        const btn = e.target.closest('.btn-search-produit');
+        if (btn) {
+            rowToFill = btn.closest('.formset-row');
+            produitModal.show();
+        }
+    });
+
+    // Sélectionner un produit depuis la modale
+    document.addEventListener('click', function (e) {
+        const selectBtn = e.target.closest('.select-this-produit');
+        if (selectBtn && rowToFill) {
+            rowToFill.querySelector('[name$="-compte"]').value       = selectBtn.dataset.compte;
+            rowToFill.querySelector('[name$="-designation"]').value  = selectBtn.dataset.designation;
+            rowToFill.querySelector('[name$="-specification"]').value = selectBtn.dataset.specification;
+            rowToFill.querySelector('[name$="-observation"]').value  = selectBtn.dataset.observation;
+            produitModal.hide();
+            updateTotals();
+            rowToFill = null;
+        }
+    });
+
+    updateTotals();
+});
+</script>
+{% endblock %}

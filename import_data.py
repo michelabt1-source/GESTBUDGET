@@ -204,18 +204,30 @@ def importer_bons_engagement():
                 # On utilise N° (colonne Excel) pour num_bon_engagement (modèle)
                 num_be = row['N°']
                 if pd.notna(num_be):
+                    # Récupérer l'instance du Fournisseur
+                    fournisseur_nom = row['Fournisseur'] if pd.notna(row['Fournisseur']) else None
+                    fournisseur_obj = None
+                    if fournisseur_nom:
+                        try:
+                            fournisseur_obj = Fournisseur.objects.get(nom=fournisseur_nom)
+                        except Fournisseur.DoesNotExist:
+                            # Créer le fournisseur s'il n'existe pas
+                            fournisseur_obj = Fournisseur.objects.create(
+                                nom=fournisseur_nom,
+                                code_four=fournisseur_nom[:10]  # Utiliser les 10 premiers caractères comme code
+                            )
+                    
                     _, created = BonEngagement.objects.get_or_create(
                         num_bon_engagement=num_be,
-                        annee_ex=str(row['Code_EX']) if pd.notna(row['Code_EX']) else "2025",
+                        annee_ex=int(row['Code_EX']) if pd.notna(row['Code_EX']) else 2025,
                         defaults={
                             'reference_pieces': row['Référence_pièces'] if pd.notna(row['Référence_pièces']) else "",
-                            'fournisseur': row['Fournisseur'] if pd.notna(row['Fournisseur']) else "",
+                            'fournisseur': fournisseur_obj,
                             'date_engagement': row['Date Engagement'] if pd.notna(row['Date Engagement']) else None,
                             'objet_engagement': row['Objet_Engagement'] if pd.notna(row['Objet_Engagement']) else "",
                             'nom_totalisateur': row['Totalisateur'] if pd.notna(row['Totalisateur']) else "",
-                            'comptes': str(row['Comptes']) if pd.notna(row['Comptes']) else "",
-                            'montant_inscrit': Decimal(str(row['Montant_inscrit'])) if pd.notna(row['Montant_inscrit']) else 0,
                             'nom_service': row['Service demandeur'] if pd.notna(row['Service demandeur']) else "",
+                            'montant_inscrit': Decimal(str(row['Montant_inscrit'])) if pd.notna(row['Montant_inscrit']) else 0,
                             'facture': bool(row['Facturé']) if pd.notna(row['Facturé']) else False,
                             'valide': bool(row['Validé']) if pd.notna(row['Validé']) else False,
                         }

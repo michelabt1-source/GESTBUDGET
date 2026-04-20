@@ -1,13 +1,18 @@
 import json
+from django.contrib import messages
 from django import forms
 from django.db.models.manager import BaseManager
+from django.db import transaction
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse_lazy
+from django.forms import inlineformset_factory
 from django.views.generic import CreateView, ListView, DeleteView
 from django.urls import reverse_lazy
-from budget_app.forms import AllocationForm, DBMForm
-from budget_app.models import DBM, AllocationBudget, Fournisseur, MembresCommission, NumComptePrincipal, Produit, SousCompte, Unite, SituationGeneralBugdet
+from django.contrib.auth.mixins import LoginRequiredMixin
+from budget_app.forms import AllocationForm, DBMForm, BonEngagementForm, DetailsEngagementForm, FactureForm
+from budget_app.models import DBM, AllocationBudget, Budget, Fournisseur, MembresCommission, NumComptePrincipal, Produit, SousCompte, Unite, SituationGeneralBugdet,BonEngagement, DetailsEngagement, Facture, DetailsFacture
 
 @login_required
 def home(request):
@@ -146,3 +151,303 @@ class DBMDeleteView(DeleteView):
     model = DBM
     template_name = 'budget_app/dbm_confirm_delete.html'
     success_url = reverse_lazy('dbm_list')
+
+
+@login_required
+def engagement_create_view(request):
+    EngagementDetailsFormSet = inlineformset_factory(
+        BonEngagement,
+        DetailsEngagement,
+        form=DetailsEngagementForm,
+        extra=1,
+        can_delete=True
+    )
+
+    if request.method == 'POST':
+        form = BonEngagementForm(request.POST)
+        
+        if form.is_valid():
+            # On sauvegarde d'abord le bon SANS commit=False
+            # pour obtenir une instance avec un PK
+            bon = form.save()
+            
+            # CORRECTION : on lie le formset à l'instance SAUVEGARDÉE
+            formset = EngagementDetailsFormSet(request.POST, instance=bon)
+            
+            if formset.is_valid():
+                try:
+                    with transaction.atomic():
+                        formset.save()
+                    return redirect('engagement_list')
+                except Exception as e:
+                    print(f"Erreur lors de l'enregistrement : {e}")
+                    bon.delete()  # Annule le bon si les détails échouent
+            else:
+                print("ERREURS FORMSET:", formset.errors)
+                print("ERREURS NON-FORM:", formset.non_form_errors())
+                bon.delete()  # Annule le bon si le formset est invalide
+        else:
+            # Formset vide pour réafficher le formulaire avec les erreurs
+            formset = EngagementDetailsFormSet()
+            print("ERREURS FORMULAIRE:", form.errors)
+    else:
+        form = BonEngagementForm()
+        formset = EngagementDetailsFormSet()
+
+    tous_les_produits = Produit.objects.all()
+
+    return render(request, 'budget_app/engagement_form.html', {
+        'form': form,
+        'formset': formset,
+        'tous_les_produits': tous_les_produits,
+    })
+class BonEngagementListView(LoginRequiredMixin, ListView):
+    model = BonEngagement
+    template_name = 'budget_app/engagement_list.html'
+    context_object_name = 'engagements'
+    ordering = ['-date_engagement']
+@login_required
+def engagement_validate(request, pk):
+    bon = get_object_or_404(BonEngagement, pk=pk)
+    bon.valide = True
+    bon.save()
+    return redirect('engagement_list')
+
+@login_required
+def engagement_devalidate(request, pk):
+    bon = get_object_or_404(BonEngagement, pk=pk)
+    bon.valide = False
+    bon.save()
+    return redirect('engagement_list')  
+@login_required
+def engagement_print(request, pk):
+    bon = get_object_or_404(BonEngagement, pk=pk)
+    details = bon.detailsengagement_set.all()
+    return render(request, 'budget_app/engagement_print.html', {
+        'bon': bon,
+        'details': details,
+    })  
+@login_required
+def engagement_print_commande(request, pk): 
+    bon = get_object_or_404(BonEngagement, pk=pk)
+    details = bon.detailsengagement_set.all()
+    return render(request, 'budget_app/engagement_print_commande.html', {
+        'bon': bon,
+        'details': details,
+    })
+@login_required
+def get_produit_details(request, produit_id):
+    try:
+        produit = Produit.objects.get(id=produit_id)
+        data = {
+            'designation': produit.designation,
+            'specification': produit.specification,
+            'unite': produit.unite.nom_unite if produit.unite else '',
+        }
+        return JsonResponse(data)
+    except Produit.DoesNotExist:
+        return JsonResponse({'error': 'Produit non trouvé'}, status=404)
+@login_required
+def engagement_edit_view(request, pk):
+    bon = get_object_or_404(BonEngagement, pk=pk)
+    
+    EngagementDetailsFormSet = inlineformset_factory(
+        BonEngagement,
+        DetailsEngagement,
+        form=DetailsEngagementForm,
+        extra=1,
+        can_delete=True
+    )
+
+    if request.method == 'POST':
+        form = BonEngagementForm(request.POST, instance=bon)
+        
+        if form.is_valid():
+            bon = form.save()
+            formset = EngagementDetailsFormSet(request.POST, instance=bon)
+            
+            if formset.is_valid():
+                try:
+                    with transaction.atomic():
+                        formset.save()
+                    return redirect('engagement_list')
+                except Exception as e:
+                    print(f"Erreur : {e}")
+            else:
+                print("ERREURS FORMSET:", formset.errors)
+        else:
+            formset = EngagementDetailsFormSet(instance=bon)
+            print("ERREURS FORM:", form.errors)
+    else:
+        form = BonEngagementForm(instance=bon)
+        formset = EngagementDetailsFormSet(instance=bon)
+
+    tous_les_produits = Produit.objects.all()
+
+    return render(request, 'budget_app/engagement_form.html', {
+        'form': form,
+        'formset': formset,
+        'tous_les_produits': tous_les_produits,
+        'is_edit': True,  # ✅ Pour adapter le titre dans le template
+    })
+@login_required
+def engagement_validate(request, pk):
+    bon = get_object_or_404(BonEngagement, pk=pk)
+    
+    if bon.valide:
+        messages.warning(request, "Ce bon est déjà validé.")
+        return redirect('engagement_list')
+
+    try:
+        with transaction.atomic():
+            details = bon.detailsengagement_set.all()
+            
+            for ligne in details:
+                montant_ligne = (ligne.prix_unitaire_ttc or 0) * (ligne.quantite_engagement or 0)
+                code_compte = ligne.compte 
+    
+                print(f"--- DEBUG VALIDATION ---")
+                print(f"Compte cherché: '{code_compte}' | Année: '{bon.annee_ex}'")
+
+                allocation = AllocationBudget.objects.filter(
+                     num_sous_compte=code_compte, 
+                     annee_ex=bon.annee_ex
+               ).first()
+
+                if allocation:
+                   print(f"Allocation TROUVÉE : {allocation.id}")
+                   allocation.realisation_budget += montant_ligne
+                   allocation.save()
+                else:
+                   print(f"ERREUR : Allocation NON TROUVÉE pour le compte {code_compte}")
+
+                # --- B. MISE À JOUR DU BUDGET GLOBAL (ANNUEL) ---
+                budget_global = Budget.objects.filter(
+                    compte=code_compte, 
+                    annee_ex=bon.annee_ex
+                ).first()
+
+                if budget_global:
+                    budget_global.montant_engage += montant_ligne
+                    # On recalcule le reliquat immédiatement
+                    budget_global.reliquat = budget_global.prevision - budget_global.montant_engage
+                    budget_global.save()
+
+                # --- C. MISE À JOUR DU FOURNISSEUR ---
+                if bon.fournisseur:
+                    # Si votre modèle Fournisseur a un champ cumulatif
+                    # bon.fournisseur.montant_total_engage += montant_ligne
+                    # bon.fournisseur.save()
+                    pass
+
+            # Finalisation : On marque le bon comme validé
+            bon.valide = True
+            bon.save()
+            
+            messages.success(request, f"Bon N°{bon.num_bon_engagement} validé. Budgets mis à jour.")
+
+    except ValueError as e:
+        messages.error(request, f"Alerte Budget : {str(e)}")
+    except Exception as e:
+        # CORRECTION ICI : Utilisez messages.error(request, ...) 
+        # et non un dictionnaire
+        messages.error(request, f"Erreur technique : {str(e)}")
+        print(f"DEBUG: {str(e)}") # Pour voir l'erreur réelle dans votre console
+    
+    return redirect('engagement_list')
+def facture_create_view(request):
+    # On définit le formset pour les lignes de facture
+    FactureDetailsFormSet = inlineformset_factory(
+        Facture, 
+        DetailsFacture,
+        fields=('compte', 'designation', 'quantite_facture', 'prix_unitaire_ttc'),
+        extra=1,
+        can_delete=True
+    )
+
+    if request.method == 'POST':
+        form = FactureForm(request.POST) # Vous devrez créer FactureForm dans forms.py
+        formset = FactureDetailsFormSet(request.POST)
+        
+        if form.is_valid() and formset.is_valid():
+            facture = form.save()
+            formset.instance = facture
+            formset.save()
+            return redirect('facture_list')
+    else:
+        form = FactureForm()
+        formset = FactureDetailsFormSet()
+
+    return render(request, 'budget_app/facture_form.html', {
+        'form': form,
+        'formset': formset
+    })
+def facture_create_view(request):
+    FactureDetailsFormSet = inlineformset_factory(
+    Facture, 
+    DetailsFacture,
+    # Utilisez UNIQUEMENT les noms de champs présents dans votre modèle ci-dessus
+    fields=['objet_depense', 'quantite_facture', 'montant', 'fournisseur', 'annee_ex'],
+    extra=1,
+    can_delete=True,
+    widgets={
+        'objet_depense': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Désignation'}),
+        'quantite_facture': forms.NumberInput(attrs={'class': 'form-control qty-fact'}),
+        'montant': forms.NumberInput(attrs={'class': 'form-control pu-fact'}),
+        'fournisseur': forms.HiddenInput(), # On peut les cacher si on les remplit par JS
+        'annee_ex': forms.HiddenInput(),
+    }
+    )
+
+    if request.method == 'POST':
+        form = FactureForm(request.POST)
+        formset = FactureDetailsFormSet(request.POST)
+        
+        if form.is_valid() and formset.is_valid():
+            facture = form.save()
+            formset.instance = facture
+            formset.save()
+            messages.success(request, f"Facture {facture.num_facture} enregistrée.")
+            return redirect('facture_list')
+    else:
+        form = FactureForm()
+        formset = FactureDetailsFormSet()
+
+    return render(request, 'budget_app/facture_form.html', {
+        'form': form,
+        'formset': formset
+    })
+
+def get_engagement_details(request, engagement_id):
+    try:
+        bon = BonEngagement.objects.get(id=engagement_id)
+        details = DetailsEngagement.objects.filter(bon_parent=bon)
+        
+        lignes = []
+        for d in details:
+            lignes.append({
+                'compte': d.compte,
+                'designation': d.designation,
+                'quantite': float(d.quantite_engagement),
+                'prix_ttc': float(d.prix_unitaire_ttc),
+            })
+            
+        return JsonResponse({
+            'fournisseur': bon.fournisseur.nom if bon.fournisseur else "",
+            'annee': bon.annee_ex,
+            'lignes': lignes
+        })
+    except BonEngagement.DoesNotExist:
+        return JsonResponse({'error': 'Engagement non trouvé'}, status=404)
+def operations_view(request):
+    # Ici, vous pouvez récupérer et afficher les opérations récentes (DBM, engagements, factures)
+    dbms_recents = DBM.objects.all().order_by('-date_dbm')[:10]
+    engagements_recents = BonEngagement.objects.all().order_by('-date_engagement')[:10]
+    factures_recents = Facture.objects.all().order_by('-date_fact')[:10]
+
+    context = {
+        'dbms_recents': dbms_recents,
+        'engagements_recents': engagements_recents,
+        'factures_recents': factures_recents,
+    }
+    return render(request, 'budget_app/operations.html', context)

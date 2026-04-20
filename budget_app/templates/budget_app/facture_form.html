@@ -1,0 +1,100 @@
+e{% extends 'budget_app/base.html' %}
+
+{% block content %}
+<div class="card shadow-lg border-0 rounded-4">
+    <div class="card-header bg-indigo text-white p-3">
+        <h5 class="mb-0"><i class="fas fa-file-invoice me-2"></i>Saisie Facture Fournisseur</h5>
+    </div>
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            {{ formset.management_form }}
+
+            <div class="row g-3 mb-4">
+                <div class="col-md-3">
+                    <label>Lier à un Engagement</label>
+                    {{ form.engagement_source }}
+                </div>
+                <div class="col-md-2">
+                    <label>N° Facture</label>
+                    {{ form.num_facture }}
+                </div>
+                <div class="col-md-2">
+                    <label>Date Facture</label>
+                    {{ form.date_fact }}
+                </div>
+                <div class="col-md-3">
+                    <label>Fournisseur</label>
+                    {{ form.fournisseur }}
+                </div>
+            </div>
+
+            <table class="table table-bordered align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Compte</th>
+                        <th>Désignation</th>
+                        <th>Quantité</th>
+                        <th>P.U TTC</th>
+                        <th>Total TTC</th>
+                    </tr>
+                </thead>
+                <tbody>
+    {% for subform in formset %}
+    <tr class="formset-row">
+        {% for hidden in subform.hidden_fields %}{{ hidden }}{% endfor %}
+        
+        <td>{{ subform.objet_depense }}</td> 
+        <td>{{ subform.quantite_facture }}</td>
+        <td>{{ subform.montant }}</td> <td class="text-center">
+            <input type="text" class="form-control form-control-sm line-total" readonly value="0">
+        </td>
+    </tr>
+    {% endfor %}
+</tbody>
+            </table>
+
+            <button type="submit" class="btn btn-success px-4">
+                <i class="fas fa-save me-2"></i>Enregistrer la Facture
+            </button>
+        </form>
+    </div>
+</div>
+<script>
+document.getElementById('id_engagement_source').addEventListener('change', function() {
+    const engagementId = this.value;
+    if (!engagementId) return;
+
+    fetch(`/operations/api/get-engagement/${engagementId}/`) // Ajustez le chemin selon vos URLs
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) return;
+
+            // 1. On remplit l'entête
+            if (document.getElementById('id_fournisseur')) {
+                document.getElementById('id_fournisseur').value = data.fournisseur;
+            } 
+            if (document.getElementById('id_annee_ex')) {
+                document.getElementById('id_annee_ex').value = data.annee;
+            }
+
+            // 2. On remplit les lignes du tableau
+            const rows = document.querySelectorAll('.formset-row');
+            
+            data.lignes.forEach((ligne, index) => {
+                // Si on a besoin de plus de lignes, on peut les ajouter ici (ou remplir celles existantes)
+                if (rows[index]) {
+                    const row = rows[index];
+                    row.querySelector('input[name$="objet_depense"]').value = ligne.designation;
+                    row.querySelector('input[name$="quantite_facture"]').value = ligne.quantite_engagement;
+                    row.querySelector('input[name$="prix_unitaire_ttc"]').value = ligne.prix_unitaire_ttc;          
+                           
+                    // On déclenche le calcul du total de la ligne
+                    const event = new Event('input', { bubbles: true });
+                    row.querySelector('input[name$="quantite_facture"]').dispatchEvent(event);
+                }
+            });
+        });
+});
+</script>
+{% endblock %}

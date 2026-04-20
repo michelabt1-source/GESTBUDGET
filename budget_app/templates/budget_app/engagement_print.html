@@ -1,0 +1,143 @@
+{% extends 'budget_app/base.html' %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row mb-4">
+        <div class="col-12">
+            <button onclick="window.print();" class="btn btn-primary me-2">
+                <i class="fas fa-print me-2"></i>Imprimer
+            </button>
+            <a href="{% url 'engagement_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Retour
+            </a>
+        </div>
+    </div>
+
+    <div class="card border-1 shadow-sm">
+        <div class="card-body p-5">
+            <!-- En-tête du document -->
+            <div class="text-center mb-5">
+                <h2 class="fw-bold">BON D'ENGAGEMENT</h2>
+                <p class="text-muted">Exercice 2026</p>
+            </div>
+
+            <!-- Informations principales -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="fw-bold small text-uppercase">N° Bon :</label>
+                        <p>{{ bon.num_bon_engagement }}</p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="fw-bold small text-uppercase">Date :</label>
+                        <p>{{ bon.date_engagement|date:"d/m/Y" }}</p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="fw-bold small text-uppercase">Fournisseur :</label>
+                        <p>{{ bon.fournisseur }}</p>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="fw-bold small text-uppercase">Compte Budgétaire :</label>
+                        <p>{{ bon.comptes }}</p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="fw-bold small text-uppercase">Service :</label>
+                        <p>{{ bon.nom_service }}</p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="fw-bold small text-uppercase">Référence Pièces :</label>
+                        <p>{{ bon.reference_pieces }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Objet de l'engagement -->
+            <div class="mb-4">
+                <label class="fw-bold small text-uppercase">Objet de l'Engagement :</label>
+                <p class="border p-3 bg-light">{{ bon.objet_engagement }}</p>
+            </div>
+
+            <!-- Tableau des articles -->
+            <div class="mb-4">
+                <h5 class="fw-bold mb-3">Détails des Articles</h5>
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead class="bg-light">
+                            <tr>
+                                <th>Compte</th>
+                                <th>Désignation</th>
+                                <th>Spécification</th>
+                                <th>Quantité</th>
+                                <th>P.U HT</th>
+                                <th>P.U TTC</th>
+                                <th>Total TTC</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for detail in details %}
+                            <tr>
+                                <td>{{ detail.compte }}</td>
+                                <td>{{ detail.designation }}</td>
+                                <td>{{ detail.specification }}</td>
+                                <td class="text-center">{{ detail.quantite_engagement }}</td>
+                                <td class="text-end">{{ detail.prix_unitaire_ht|floatformat:2 }} F</td>
+                                <td class="text-end">{{ detail.prix_unitaire_ttc|floatformat:2 }} F</td>
+                                <td class="text-end fw-bold">{{ detail.montant_ttc|floatformat:0 }} F</td>
+                            </tr>
+                            {% endfor %}
+                            <tr class="fw-bold bg-light">
+                                <td colspan="6" class="text-end">TOTAL :</td>
+                                <td class="text-end">{{ bon.montant_engagement|floatformat:0 }} F CFA</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Statut -->
+            <div class="row mt-5">
+                <div class="col-md-6">
+                    <p class="small"><strong>Statut :</strong> 
+                        {% if bon.valide %}
+                            <span class="badge bg-success">Validé</span>
+                        {% else %}
+                            <span class="badge bg-warning">Non validé</span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+
+            <!-- Signatures -->
+            <div class="row mt-5">
+                <div class="col-md-4 text-center">
+                    <p class="border-top pt-2">Responsable Engagement</p>
+                </div>
+                <div class="col-md-4 text-center">
+                    <p class="border-top pt-2">Chef Service</p>
+                </div>
+                <div class="col-md-4 text-center">
+                    <p class="border-top pt-2">Validateur</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    @media print {
+        body {
+            margin: 0;
+            padding: 0;
+        }
+        .btn {
+            display: none;
+        }
+        .card {
+            box-shadow: none;
+            border: 1px solid #ddd;
+        }
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,152 @@
+{% extends 'budget_app/base.html' %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row mb-4">
+        <div class="col-12">
+            <button onclick="window.print();" class="btn btn-primary me-2">
+                <i class="fas fa-print me-2"></i>Imprimer
+            </button>
+            <a href="{% url 'engagement_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Retour
+            </a>
+        </div>
+    </div>
+
+    <div class="card border-1 shadow-sm">
+        <div class="card-body p-5">
+            <!-- En-tête du document -->
+            <div class="text-center mb-5">
+                <h2 class="fw-bold">BON DE COMMANDE</h2>
+                <p class="text-muted">Exercice 2026</p>
+            </div>
+
+            <!-- Informations principales -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="fw-bold small text-uppercase">N° Bon de Commande :</label>
+                        <p>{{ bon.num_bon_engagement }}</p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="fw-bold small text-uppercase">Date de Commande :</label>
+                        <p>{{ bon.date_engagement|date:"d/m/Y" }}</p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="fw-bold small text-uppercase">Fournisseur :</label>
+                        <p>{{ bon.fournisseur }}</p>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="fw-bold small text-uppercase">Totalisateur :</label>
+                        <p>{{ bon.nom_totalisateur }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="fw-bold small text-uppercase">Service :</label>
+                        <p>{{ bon.nom_service }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Objet -->
+            <div class="mb-4">
+                <label class="fw-bold small text-uppercase">Objet :</label>
+                <p class="border p-3 bg-light">{{ bon.objet_engagement }}</p>
+            </div>
+
+            <!-- Tableau des articles commandés -->
+            <div class="mb-4">
+                <h5 class="fw-bold mb-3">Commande de Matières</h5>
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead class="bg-light">
+                            <tr>
+                                <th>N°</th>
+                                <th>Désignation</th>
+                                <th>Spécification</th>
+                                <th>Quantité</th>
+                                <th>Prix Unitaire</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for detail in details %}
+                            <tr>
+                                <td class="text-center">{{ forloop.counter }}</td>
+                                <td>{{ detail.designation }}</td>
+                                <td class="small">{{ detail.specification }}</td>
+                                <td class="text-center">{{ detail.quantite_engagement }}</td>
+                                <td class="text-end">{{ detail.prix_unitaire_ttc|floatformat:2 }} F</td>
+                                <td class="text-end fw-bold">{{ detail.montant_ttc|floatformat:0 }} F</td>
+                            </tr>
+                            {% endfor %}
+                            <tr class="fw-bold bg-light">
+                                <td colspan="5" class="text-end">MONTANT TOTAL :</td>
+                                <td class="text-end">{{ bon.montant_engagement|floatformat:0 }} F CFA</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Observations -->
+            <div class="mb-4">
+                <label class="fw-bold small text-uppercase">Observations :</label>
+                <p class="border p-3 bg-light" style="min-height: 60px;">
+                    {% for detail in details %}
+                        {% if detail.observation %}
+                            • {{ detail.observation }}<br>
+                        {% endif %}
+                    {% endfor %}
+                </p>
+            </div>
+
+            <!-- Conditions de livraison -->
+            <div class="row mt-5 mb-4">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="fw-bold small">Délai de Livraison :</label>
+                        <p class="border p-2 bg-light">________________</p>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="fw-bold small">Lieu de Livraison :</label>
+                        <p class="border p-2 bg-light">________________</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Signatures -->
+            <div class="row mt-5">
+                <div class="col-md-4 text-center">
+                    <p class="border-top pt-2 small">Demandeur<br>{{ bon.nom_service }}</p>
+                </div>
+                <div class="col-md-4 text-center">
+                    <p class="border-top pt-2 small">Responsable Achat</p>
+                </div>
+                <div class="col-md-4 text-center">
+                    <p class="border-top pt-2 small">Chef de Division</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    @media print {
+        body {
+            margin: 0;
+            padding: 0;
+        }
+        .btn {
+            display: none;
+        }
+        .card {
+            box-shadow: none;
+            border: 1px solid #ddd;
+        }
+    }
+</style>
+{% endblock %}

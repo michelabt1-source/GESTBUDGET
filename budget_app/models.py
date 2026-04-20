@@ -164,20 +164,35 @@ class DetailsRecette(models.Model):
 class BonEngagement(models.Model):
     num_bon_engagement = models.IntegerField(verbose_name="N°", default=0)
     reference_pieces = models.CharField(max_length=50, verbose_name="Référence pièces", default="")
-    annee_ex = models.CharField(max_length=50, verbose_name="Code_EX", default="")
-    fournisseur = models.CharField(max_length=50, verbose_name="Fournisseur", default="")
+    annee_ex = models.IntegerField(verbose_name="Année", null=True, blank=True)
+    fournisseur = models.ForeignKey('Fournisseur', on_delete=models.CASCADE, verbose_name="Fournisseur")
     date_engagement = models.DateField(verbose_name="Date Engagement", null=True, blank=True)
     objet_engagement = models.CharField(max_length=50, verbose_name="Objet_Engagement", default="")
     nom_totalisateur = models.CharField(max_length=50, verbose_name="Totalisateur", default="")
-    comptes = models.CharField(max_length=50, verbose_name="Comptes", default="")
-    nombre_articles = models.IntegerField(verbose_name="Nombre articles", default=0)
-    montant_engagement = models.DecimalField(max_digits=18, decimal_places=2, verbose_name="Montant engagement", default=0)
-    montant_inscrit = models.DecimalField(max_digits=18, decimal_places=2, verbose_name="Montant inscrit", default=0)
+    comptes = models.ForeignKey('AllocationBudget', on_delete=models.CASCADE, verbose_name="Compte Budgétaire", null=True, blank=True)
+    nombre_articles = models.IntegerField(verbose_name="Nombre articles", default=0, blank=True, null=True)
+    montant_engagement = models.DecimalField(max_digits=18, decimal_places=2, default=0, blank=True, null=True)
+    montant_inscrit = models.DecimalField(max_digits=18, decimal_places=2, default=0, blank=True, null=True)
     nom_service = models.CharField(max_length=50, verbose_name="Service demandeur", default="")
     
     # Type Interrupteur WinDev -> BooleanField
     facture = models.BooleanField(default=False, verbose_name="Facturé")
     valide = models.BooleanField(default=False, verbose_name="Validé")
+    def save(self, *args, **kwargs):
+        # ✅ Auto-incrément uniquement à la création
+        if not self.pk:
+            dernier = BonEngagement.objects.order_by('-num_bon_engagement').first()
+            self.num_bon_engagement = (dernier.num_bon_engagement + 1) if dernier else 1
+
+        if self.date_engagement:
+            self.annee_ex = self.date_engagement.year
+
+        super().save(*args, **kwargs)
+    def calculer_totaux(self):
+        details = self.detailsengagement_set.all()
+        self.montant_engagement = sum(d.montant_ttc for d in details)
+        self.nombre_articles = sum(d.quantite_engagement for d in details)
+        self.save()
 
     def __str__(self):
         return f"BE N°{self.num_bon_engagement} - {self.fournisseur}"
@@ -185,8 +200,8 @@ class BonEngagement(models.Model):
 class DetailsEngagement(models.Model):
     # Liaisons
     bon_parent = models.ForeignKey(BonEngagement, on_delete=models.CASCADE, verbose_name="IDBonEngagement")
-    budget_ligne = models.ForeignKey('Budget', on_delete=models.CASCADE, verbose_name="IDbudget")
-    
+    budget_ligne = models.ForeignKey('Budget', on_delete=models.CASCADE, verbose_name="IDbudget", null=True, blank=True)
+    produit = models.ForeignKey('Produit', on_delete=models.SET_NULL, null=True, blank=True)
     designation = models.CharField(max_length=50, verbose_name="Désignation", default="")
     specification = models.CharField(max_length=50, verbose_name="Spécification", default="")
     quantite_engagement = models.DecimalField(max_digits=18, decimal_places=2, verbose_name="Quantité", default=0)
@@ -196,6 +211,12 @@ class DetailsEngagement(models.Model):
     montant_ttc = models.DecimalField(max_digits=18, decimal_places=2, verbose_name="Montant TTC", default=0)
     observation = models.CharField(max_length=50, verbose_name="Observation", default="")
     compte = models.CharField(max_length=50, verbose_name="Compte", default="")
+    def save(self, *args, **kwargs):
+        # Calcul automatique du TTC (HT * 1.18 par exemple ou selon votre règle)
+        # Ici on fait simple : Quantité * PU TTC
+        self.montant_ttc = self.quantite_engagement * self.prix_unitaire_ttc
+        super().save(*args, **kwargs)
+        self.bon_parent.calculer_totaux()
 
     def __str__(self):
         return f"Détail BE - {self.designation} ({self.montant_ttc})"
@@ -472,6 +493,31 @@ class SousCompte(models.Model):
         verbose_name="Nom Type Compte", 
         default=""
     )
+
+    def save(self, *args, **kwargs):
+        # Liaison automatique avec le compte principal si pas déjà lié
+        if not self.compte_principal and self.num_sous_compte:
+            self.compte_principal = self._find_compte_principal()
+        super().save(*args, **kwargs)
+
+    def _find_compte_principal(self):
+        """
+        Trouve automatiquement le compte principal basé sur le numéro de sous-compte.
+        """
+        if not self.num_sous_compte:
+            return None
+            
+        num_sous_compte = str(self.num_sous_compte).replace('.0', '')  # Enlever .0 à la fin
+        
+        # Tester différents longueurs de préfixe (du plus spécifique au plus général)
+        for prefix_length in [4, 3, 2]:  # Essayer d'abord 4 chiffres, puis 3, puis 2
+            if len(num_sous_compte) >= prefix_length:
+                prefix = num_sous_compte[:prefix_length]
+                try:
+                    return NumComptePrincipal.objects.get(num_compte_principal=prefix)
+                except NumComptePrincipal.DoesNotExist:
+                    continue
+        return None
 
     def __str__(self):
           return f"{self.num_sous_compte} - {self.libelle_sous_compte}"

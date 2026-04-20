@@ -16,15 +16,13 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import include, path
-
 from budget_app import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', views.home, name='home'),
-    path('structure/', views.structure_view, name='structure_page'),
-    path('budget/', include('budget_app.urls')),
-    path('accounts/', include('django.contrib.auth.urls')),  # Ajoute les URLs d'authentification
-
+    path('accounts/', include('django.contrib.auth.urls')),
+    
+    # ✅ Tout le reste est délégué à budget_app/urls.py
+    path('', include('budget_app.urls')),
 ]
-

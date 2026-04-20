@@ -333,8 +333,8 @@
                                     {% for d in historique_dbm %}
                                     <tr>
                                         <td class="small">{{ d.date_dbm|date:"d/m/Y" }}</td>
-                                        <td><span class="badge border text-danger bg-light">{{ d.comptes_de }}</span></td>
-                                        <td><span class="badge border text-success bg-light">{{ d.compte_fi }}</span></td>
+                                        <td><span class="badge border text-danger bg-light">{{ d.compte_source }}</span></td>
+                                        <td><span class="badge border text-success bg-light">{{ d.compte_destinataire }}</span></td>
                                         <td class="text-end fw-bold">{{ d.montant_dbm|floatformat:0 }} F</td>
                                         <td class="text-center small text-muted">{{ d.annee_ex }}</td>
                                     </tr>
