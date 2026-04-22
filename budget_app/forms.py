@@ -89,10 +89,9 @@ class BonEngagementForm(forms.ModelForm):
         widgets = {
             'num_bon_engagement': forms.NumberInput(attrs={
                 'class': 'form-control form-control-sm fw-bold text-primary bg-light',
-                'readonly': 'readonly',  # ✅ Non modifiable
+                'readonly': 'readonly',
                 'placeholder': 'Auto'
             }),
-
             'date_engagement': forms.DateInput(attrs={'type': 'date', 'class': 'form-control form-control-sm'}),
             'fournisseur': forms.Select(attrs={'class': 'form-select form-select-sm select2'}),
             'comptes': forms.Select(attrs={'class': 'form-select form-select-sm select2'}),
@@ -101,13 +100,12 @@ class BonEngagementForm(forms.ModelForm):
             'objet_engagement': forms.Textarea(attrs={'class': 'form-control form-control-sm', 'rows': '2'}),
             'nom_service': forms.TextInput(attrs={'class': 'form-control form-control-sm'}),
             'nom_totalisateur': forms.TextInput(attrs={'class': 'form-control form-control-sm'}),
-            'montant_engagement': forms.NumberInput(attrs={'class': 'form-control form-control-sm bg-light fw-bold', 'readonly': 'readonly'}),
-            'nombre_articles': forms.NumberInput(attrs={'class': 'form-control form-control-sm bg-light', 'readonly': 'readonly'}),
             'valide': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
-def __init__(self, *args, **kwargs):
+
+    # ✅ INDENTÉ CORRECTEMENT à l'intérieur de la classe
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # ✅ Pas requis car calculé automatiquement
         self.fields['num_bon_engagement'].required = False
 class DetailsEngagementForm(forms.ModelForm):
     class Meta:

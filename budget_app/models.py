@@ -46,21 +46,16 @@ class Budget(models.Model):
     fournisseur = models.ForeignKey(Fournisseur, on_delete=models.SET_NULL, null=True, blank=True)
     
     annee_ex = models.CharField(max_length=50, verbose_name="Code_EX")
-    compte = models.CharField(max_length=50, verbose_name="Comptes") # Gardé 'compte' pour ton admin
+    compte = models.CharField(max_length=50, verbose_name="Comptes")
     libelle_compte = models.CharField(max_length=255, verbose_name="Libellé_compte")
     
-    # Montants (Noms alignés avec ton admin actuel)
     prevision = models.DecimalField(max_digits=18, decimal_places=2, default=0)
-    montant_engage = models.DecimalField(max_digits=18, decimal_places=2, default=0)
-    montant_realise = models.DecimalField(max_digits=18, decimal_places=2, default=0)    
-    # Ajouts pour les futurs calculs (Recettes/Paiements)
-    quantite_recette = models.FloatField(default=0)
-    # Ce champ sera lié aux "DetailsPayement"
+    montant_engage = models.DecimalField(max_digits=18, decimal_places=2, default=0, verbose_name="Total Engagé")  # ✅ Un seul
+    montant_realise = models.DecimalField(max_digits=18, decimal_places=2, default=0)
     montant_paye = models.DecimalField(max_digits=18, decimal_places=2, default=0, verbose_name="Cumul Paiements")
-    # Ce champ sera lié aux "DetailsDepense" (Engagements)
-    montant_engage = models.DecimalField(max_digits=18, decimal_places=2, default=0, verbose_name="Total Engagé")
-    # Le résultat calculé
+    quantite_recette = models.FloatField(default=0)
     reliquat = models.DecimalField(max_digits=18, decimal_places=2, default=0, verbose_name="Reliquat Disponible")
+
     def __str__(self):
         return self.libelle_compte
 

@@ -11,9 +11,12 @@ from django.forms import inlineformset_factory
 from django.views.generic import CreateView, ListView, DeleteView
 from django.urls import reverse_lazy
 from django.contrib.auth.mixins import LoginRequiredMixin
+from budget_app import models
+from django.db.models import Sum  
 from budget_app.forms import AllocationForm, DBMForm, BonEngagementForm, DetailsEngagementForm, FactureForm
 from budget_app.models import DBM, AllocationBudget, Budget, Fournisseur, MembresCommission, NumComptePrincipal, Produit, SousCompte, Unite, SituationGeneralBugdet,BonEngagement, DetailsEngagement, Facture, DetailsFacture
-
+from django.views.generic import ListView
+from django.db.models import Sum, Count, Q
 @login_required
 def home(request):
     # Simulation de données issues de tes modèles (BonEngagement et Facture)
@@ -201,17 +204,25 @@ def engagement_create_view(request):
         'formset': formset,
         'tous_les_produits': tous_les_produits,
     })
-class BonEngagementListView(LoginRequiredMixin, ListView):
+class BonEngagementListView(ListView):
     model = BonEngagement
     template_name = 'budget_app/engagement_list.html'
     context_object_name = 'engagements'
-    ordering = ['-date_engagement']
-@login_required
-def engagement_validate(request, pk):
-    bon = get_object_or_404(BonEngagement, pk=pk)
-    bon.valide = True
-    bon.save()
-    return redirect('engagement_list')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        engagements = self.get_queryset()
+        
+        # Calcul des statistiques dans la vue
+        context['total_engagements'] = engagements.count()
+        context['montant_total'] = engagements.aggregate(
+            total=Sum('montant_engagement')
+        )['total'] or 0
+        context['total_valides'] = engagements.filter(valide=True).count()
+        context['total_attente'] = engagements.filter(valide=False).count()
+        
+        return context
+
 
 @login_required
 def engagement_devalidate(request, pk):
@@ -302,58 +313,79 @@ def engagement_validate(request, pk):
         with transaction.atomic():
             details = bon.detailsengagement_set.all()
             
+            if not details.exists():
+                messages.warning(request, "Ce bon n'a aucun détail, impossible de valider.")
+                return redirect('engagement_list')
+
+            # ✅ annee_ex converti en string pour AllocationBudget (CharField)
+            annee_str = str(bon.annee_ex)
+            montant_total = 0
+
             for ligne in details:
                 montant_ligne = (ligne.prix_unitaire_ttc or 0) * (ligne.quantite_engagement or 0)
-                code_compte = ligne.compte 
-    
-                print(f"--- DEBUG VALIDATION ---")
-                print(f"Compte cherché: '{code_compte}' | Année: '{bon.annee_ex}'")
+                montant_total += montant_ligne
+                code_compte = ligne.compte.strip()  # ✅ Supprimer espaces parasites
 
-                allocation = AllocationBudget.objects.filter(
-                     num_sous_compte=code_compte, 
-                     annee_ex=bon.annee_ex
-               ).first()
+                print(f"--- Compte: '{code_compte}' | Année: '{annee_str}' | Montant: {montant_ligne} ---")
 
-                if allocation:
-                   print(f"Allocation TROUVÉE : {allocation.id}")
-                   allocation.realisation_budget += montant_ligne
-                   allocation.save()
+                # --- A. MISE À JOUR AllocationBudget ---
+                # ✅ Méthode 1 : via la ForeignKey du bon (plus fiable)
+                if bon.comptes:
+                    bon.comptes.realisation_budget += montant_ligne
+                    bon.comptes.save()
+                    print(f"✅ AllocationBudget mis à jour via FK : {bon.comptes}")
                 else:
-                   print(f"ERREUR : Allocation NON TROUVÉE pour le compte {code_compte}")
+                    # Méthode 2 : fallback par num_sous_compte
+                    allocation = AllocationBudget.objects.filter(
+                        num_sous_compte=code_compte,
+                        annee_ex=annee_str
+                    ).first()
+                    if allocation:
+                        allocation.realisation_budget += montant_ligne
+                        allocation.save()
+                        print(f"✅ AllocationBudget mis à jour : {allocation}")
+                    else:
+                        print(f"⚠️ AllocationBudget NON TROUVÉE — compte='{code_compte}', année='{annee_str}'")
+                        print(f"Comptes dispo pour année '{annee_str}':")
+                        for a in AllocationBudget.objects.filter(annee_ex=annee_str):
+                            print(f"   → '{a.num_sous_compte}'")
 
-                # --- B. MISE À JOUR DU BUDGET GLOBAL (ANNUEL) ---
+                # --- B. MISE À JOUR Budget ---
                 budget_global = Budget.objects.filter(
-                    compte=code_compte, 
-                    annee_ex=bon.annee_ex
+                    compte=code_compte,
+                    annee_ex=annee_str
                 ).first()
 
                 if budget_global:
                     budget_global.montant_engage += montant_ligne
-                    # On recalcule le reliquat immédiatement
                     budget_global.reliquat = budget_global.prevision - budget_global.montant_engage
                     budget_global.save()
+                    print(f"✅ Budget mis à jour : {budget_global}")
+                else:
+                    print(f"⚠️ Budget NON TROUVÉ — compte='{code_compte}', année='{annee_str}'")
+                    print(f"Comptes Budget dispo pour année '{annee_str}':")
+                    for b in Budget.objects.filter(annee_ex=annee_str):
+                        print(f"   → '{b.compte}'")
 
-                # --- C. MISE À JOUR DU FOURNISSEUR ---
-                if bon.fournisseur:
-                    # Si votre modèle Fournisseur a un champ cumulatif
-                    # bon.fournisseur.montant_total_engage += montant_ligne
-                    # bon.fournisseur.save()
-                    pass
+            # --- C. montant_inscrit = prévision totale des comptes utilisés ---
+            comptes_utilises = details.values_list('compte', flat=True).distinct()
+            prevision_totale = Budget.objects.filter(
+                compte__in=comptes_utilises,
+                annee_ex=annee_str
+            ).aggregate(total=Sum('prevision'))['total'] or 0
 
-            # Finalisation : On marque le bon comme validé
+            bon.montant_inscrit = prevision_totale
             bon.valide = True
             bon.save()
-            
-            messages.success(request, f"Bon N°{bon.num_bon_engagement} validé. Budgets mis à jour.")
 
-    except ValueError as e:
-        messages.error(request, f"Alerte Budget : {str(e)}")
+            messages.success(request, f"✅ Bon N°{bon.num_bon_engagement} validé. Montant : {montant_total} F CFA")
+
     except Exception as e:
-        # CORRECTION ICI : Utilisez messages.error(request, ...) 
-        # et non un dictionnaire
         messages.error(request, f"Erreur technique : {str(e)}")
-        print(f"DEBUG: {str(e)}") # Pour voir l'erreur réelle dans votre console
-    
+        print(f"❌ DEBUG ERREUR: {str(e)}")
+        import traceback
+        traceback.print_exc()  # ✅ Affiche la trace complète dans le terminal
+
     return redirect('engagement_list')
 def facture_create_view(request):
     # On définit le formset pour les lignes de facture
@@ -439,15 +471,21 @@ def get_engagement_details(request, engagement_id):
         })
     except BonEngagement.DoesNotExist:
         return JsonResponse({'error': 'Engagement non trouvé'}, status=404)
+@login_required
 def operations_view(request):
-    # Ici, vous pouvez récupérer et afficher les opérations récentes (DBM, engagements, factures)
-    dbms_recents = DBM.objects.all().order_by('-date_dbm')[:10]
-    engagements_recents = BonEngagement.objects.all().order_by('-date_engagement')[:10]
-    factures_recents = Facture.objects.all().order_by('-date_fact')[:10]
-
     context = {
-        'dbms_recents': dbms_recents,
-        'engagements_recents': engagements_recents,
-        'factures_recents': factures_recents,
+        'total_engagements': BonEngagement.objects.filter(valide=False).count(),
+        'total_factures': 0,      # pas encore implémenté
+        'total_paiements': 0,     # pas encore implémenté
+        'taux_utilisation': 0,    # pas encore implémenté
+        'recent_engagements': BonEngagement.objects.order_by('-date_engagement')[:5],
     }
     return render(request, 'budget_app/operations.html', context)
+def operations_page(request):
+    context = {
+        'total_engagements': BonEngagement.objects.count(),
+        'total_factures': Facture.objects.count(),
+        'taux_utilisation': 65,  
+        'recent_engagements': BonEngagement.objects.order_by('-date_engagement')[:5],
+    }
+    return render(request, 'budget_app/operations_page.html', context)

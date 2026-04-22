@@ -1,108 +1,379 @@
 {% extends 'budget_app/base.html' %}
 
-{% block content %}
-<div class="container-fluid py-4 px-3">
-    <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
-        <div class="card-header bg-indigo py-3 d-flex justify-content-between align-items-center">
-            <h5 class="mb-0 text-white">
-                <i class="fas fa-list me-2"></i>Liste des Bons d'Engagement
-            </h5>
-            <a href="{% url 'engagement_create' %}" class="btn btn-white btn-sm rounded-pill px-3">
-                <i class="fas fa-plus me-1"></i>Nouveau Bon
-            </a>
-        </div>
+{% block header_title %}Bons d'Engagement{% endblock %}
+{% block header_subtitle %}Gestion et suivi des engagements budgétaires{% endblock %}
 
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="bg-light small fw-bold text-uppercase">
-                        <tr>
-                            <th class="ps-4">N° Bon</th>
-                            <th>Date</th>
-                            <th>Fournisseur</th>
-                            <th>Objet</th>
-                            <th>Service</th>
-                            <th class="text-end">Montant TTC</th>
-                            <th class="text-center">Statut</th>
-                            <th class="text-center">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for bon in engagements %}
-                        <tr>
-                            <td class="ps-4 fw-bold text-indigo">BE-{{ bon.num_bon_engagement }}</td>
-                            <td class="small">{{ bon.date_engagement|date:"d/m/Y" }}</td>
-                            <td>{{ bon.fournisseur }}</td>
-                            <td class="small text-muted">{{ bon.objet_engagement|truncatewords:5 }}</td>
-                            <td class="small">{{ bon.nom_service }}</td>
-                            <td class="text-end fw-bold">
-                                {{ bon.montant_engagement|floatformat:0 }} F CFA
-                            </td>
-                            <td class="text-center">
-                                {% if not bon.valide %}
-    <a href="{% url 'engagement_validate' bon.pk %}" class="btn btn-sm btn-success">
-        <i class="fas fa-check"></i> Valider
-    </a>
-{% else %}
-    <span class="badge bg-success"><i class="fas fa-lock"></i> Validé</span>
-{% endif %}
-                            </td>
-                            <td class="text-center">
-                                <div class="d-flex justify-content-center gap-1">
-                                    {# Modifier #}
-                                    <a href="{% url 'engagement_edit' bon.pk %}" 
-                                       class="btn btn-sm btn-outline-primary rounded-pill px-2" title="Modifier">
-                                        <i class="fas fa-edit fa-xs"></i>
-                                    </a>
-                                    {# Valider / Dévalider #}
-                                    {% if bon.valide %}
-                                        <a href="{% url 'engagement_devalidate' bon.pk %}"
-                                           class="btn btn-sm btn-outline-warning rounded-pill px-2" title="Dévalider">
-                                            <i class="fas fa-times-circle fa-xs"></i>
-                                        </a>
-                                    {% else %}
-                                        <a href="{% url 'engagement_validate' bon.pk %}"
-                                           class="btn btn-sm btn-outline-success rounded-pill px-2" title="Valider">
-                                            <i class="fas fa-check-circle fa-xs"></i>
-                                        </a>
-                                    {% endif %}
-                                    {# Imprimer #}
-                                    <a href="{% url 'engagement_print' bon.pk %}"
-                                       class="btn btn-sm btn-outline-info rounded-pill px-2" title="Imprimer">
-                                        <i class="fas fa-print fa-xs"></i>
-                                    </a>
-                                </div>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="8" class="text-center py-5 text-muted">
-                                <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
-                                Aucun bon d'engagement enregistré.
-                                <br>
-                                <a href="{% url 'engagement_create' %}" class="btn btn-indigo btn-sm mt-3 text-white rounded-pill px-4">
-                                    <i class="fas fa-plus me-1"></i>Créer le premier bon
-                                </a>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+{% block content %}
+<div class="container-fluid px-0">
+    <!-- En-tête avec actions -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-2">
+                    <li class="breadcrumb-item"><a href="{% url 'home' %}" class="text-decoration-none">Accueil</a></li>
+                    <li class="breadcrumb-item active">Bons d'Engagement</li>
+                </ol>
+            </nav>
+        </div>
+        <a href="{% url 'engagement_create' %}" class="btn-gradient">
+            <i class="fas fa-plus me-2"></i>Nouveau Bon
+        </a>
+    </div>
+
+    <!-- Cartes de statistiques simplifiées -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-sm-6">
+            <div class="card-modern p-3">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <p class="text-muted small mb-1">Total</p>
+                        <h2 class="mb-0 fw-bold">{{ total_engagements }}</h2>
+                        <small class="text-muted">engagements</small>
+                    </div>
+                    <i class="fas fa-file-invoice text-primary fs-4"></i>
+                </div>
             </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="card-modern p-3">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <p class="text-muted small mb-1">Montant</p>
+                        <h2 class="mb-0 fw-bold text-success">{{ montant_total|floatformat:0 }}</h2>
+                        <small class="text-muted">F CFA</small>
+                    </div>
+                    <i class="fas fa-chart-line text-success fs-4"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="card-modern p-3">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <p class="text-muted small mb-1">Validés</p>
+                        <h2 class="mb-0 fw-bold text-success">{{ total_valides }}</h2>
+                        <small class="text-muted">bons approuvés</small>
+                    </div>
+                    <i class="fas fa-check-circle text-success fs-4"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="card-modern p-3">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <p class="text-muted small mb-1">En attente</p>
+                        <h2 class="mb-0 fw-bold text-warning">{{ total_attente }}</h2>
+                        <small class="text-muted">à valider</small>
+                    </div>
+                    <i class="fas fa-clock text-warning fs-4"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barre de recherche et filtres -->
+    <div class="card-modern mb-4">
+        <div class="p-3">
+            <div class="row g-2 align-items-center">
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <span class="input-group-text bg-transparent border-end-0">
+                            <i class="fas fa-search text-muted"></i>
+                        </span>
+                        <input type="text" id="searchInput" class="form-control border-start-0" 
+                               placeholder="Rechercher...">
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <div class="d-flex gap-2 justify-content-md-end">
+                        <button class="btn btn-sm btn-outline-primary filter-btn active" data-filter="all">
+                            Tous
+                        </button>
+                        <button class="btn btn-sm btn-outline-success filter-btn" data-filter="valide">
+                            Validés
+                        </button>
+                        <button class="btn btn-sm btn-outline-warning filter-btn" data-filter="attente">
+                            En attente
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tableau des engagements -->
+    <div class="card-modern">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="engagementTable">
+                <thead class="bg-light">
+                    <tr class="small">
+                        <th class="ps-4 py-3">N° Bon</th>
+                        <th class="py-3">Date</th>
+                        <th class="py-3">Fournisseur</th>
+                        <th class="py-3">Objet</th>
+                        <th class="py-3">Service</th>
+                        <th class="py-3 text-end">Montant</th>
+                        <th class="py-3 text-center">Statut</th>
+                        <th class="py-3 text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for bon in engagements %}
+                    <tr data-statut="{% if bon.valide %}valide{% else %}attente{% endif %}">
+                        <td class="ps-4">
+                            <span class="fw-bold text-primary">BE-{{ bon.num_bon_engagement }}</span>
+                        </td>
+                        <td class="small">{{ bon.date_engagement|date:"d/m/Y" }}</td>
+                        <td>{{ bon.fournisseur|truncatechars:25 }}</td>
+                        <td class="small text-muted">{{ bon.objet_engagement|truncatechars:40 }}</td>
+                        <td>
+                            <span class="badge bg-light text-dark">{{ bon.nom_service }}</span>
+                        </td>
+                        <td class="text-end fw-semibold">
+                            {{ bon.montant_engagement|floatformat:0 }} F CFA
+                        </td>
+                        <td class="text-center">
+                            {% if bon.valide %}
+                                <span class="badge bg-success bg-opacity-10 text-success px-3 py-2 rounded-pill">
+                                    <i class="fas fa-check-circle me-1"></i>Validé
+                                </span>
+                            {% else %}
+                                <span class="badge bg-warning bg-opacity-10 text-warning px-3 py-2 rounded-pill">
+                                    <i class="fas fa-clock me-1"></i>Attente
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <div class="d-flex gap-1 justify-content-center">
+                                <a href="{% url 'engagement_edit' bon.pk %}" 
+                                   class="btn btn-sm btn-outline-primary rounded-circle" 
+                                   style="width: 32px; height: 32px; padding: 0;"
+                                   title="Modifier">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                {% if bon.valide %}
+                                    <a href="{% url 'engagement_devalidate' bon.pk %}"
+                                       class="btn btn-sm btn-outline-warning rounded-circle"
+                                       style="width: 32px; height: 32px; padding: 0;"
+                                       title="Dévalider"
+                                       onclick="return confirm('Dévalider ce bon ?')">
+                                        <i class="fas fa-times"></i>
+                                    </a>
+                                {% else %}
+                                    <a href="{% url 'engagement_validate' bon.pk %}"
+                                       class="btn btn-sm btn-outline-success rounded-circle"
+                                       style="width: 32px; height: 32px; padding: 0;"
+                                       title="Valider"
+                                       onclick="return confirm('Valider ce bon ?')">
+                                        <i class="fas fa-check"></i>
+                                    </a>
+                                {% endif %}
+                                <a href="{% url 'engagement_print' bon.pk %}"
+                                   class="btn btn-sm btn-outline-info rounded-circle"
+                                   style="width: 32px; height: 32px; padding: 0;"
+                                   title="Imprimer"
+                                   target="_blank">
+                                    <i class="fas fa-print"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-5">
+                            <i class="fas fa-inbox fa-3x text-muted mb-3 d-block"></i>
+                            <p class="text-muted mb-0">Aucun bon d'engagement</p>
+                            <a href="{% url 'engagement_create' %}" class="btn-gradient mt-3">
+                                Créer le premier bon
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
 
         {% if engagements %}
-        <div class="card-footer bg-light d-flex justify-content-between align-items-center py-2 px-4">
-            <small class="text-muted">{{ engagements|length }} bon(s) trouvé(s)</small>
+        <div class="p-3 bg-light border-top">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <small class="text-muted">
+                    <i class="fas fa-database me-1"></i>
+                    {{ total_engagements }} bon(s)
+                </small>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-primary" onclick="exportTableToExcel()">
+                        <i class="fas fa-file-excel me-1"></i>Excel
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="window.print()">
+                        <i class="fas fa-print me-1"></i>Imprimer
+                    </button>
+                </div>
+            </div>
         </div>
         {% endif %}
     </div>
 </div>
 
 <style>
-    .bg-indigo { background-color: #6610f2 !important; }
-    .text-indigo { color: #6610f2 !important; }
-    .btn-indigo { background-color: #6610f2; border-color: #6610f2; }
-    .btn-indigo:hover { background-color: #520dc2; color: white; }
+    /* Ajustements pour éviter les débordements */
+    .card-modern {
+        background: white;
+        border: none;
+        border-radius: 16px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        transition: all 0.3s;
+    }
+    
+    /* Boutons ronds cohérents */
+    .btn-circle {
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    /* Badges plus propres */
+    .badge.bg-opacity-10 {
+        backdrop-filter: blur(4px);
+    }
+    
+    /* Tableau responsive */
+    .table-responsive {
+        overflow-x: auto;
+    }
+    
+    .table td, .table th {
+        vertical-align: middle;
+        white-space: nowrap;
+    }
+    
+    /* Colonne objet qui peut prendre plus d'espace sur grand écran */
+    @media (min-width: 992px) {
+        .table td:nth-child(4) {
+            white-space: normal;
+            max-width: 250px;
+        }
+    }
+    
+    /* Ajustements pour mobile */
+    @media (max-width: 768px) {
+        .table td, .table th {
+            font-size: 0.85rem;
+        }
+        
+        .btn-sm {
+            padding: 0.25rem 0.5rem;
+        }
+    }
+    
+    /* Animation douce */
+    .filter-btn {
+        transition: all 0.2s;
+    }
+    
+    .filter-btn.active {
+        background: var(--primary);
+        color: white;
+        border-color: var(--primary);
+    }
+    
+    /* Impression */
+    @media print {
+        .sidebar, .top-header, .btn-gradient, .filter-btn, .input-group, .bg-light {
+            display: none !important;
+        }
+        .main-wrapper {
+            margin-left: 0 !important;
+            width: 100% !important;
+        }
+        .card-modern {
+            box-shadow: none;
+            border: 1px solid #ddd;
+        }
+    }
 </style>
+
+<script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+
+<script>
+    // Recherche
+    const searchInput = document.getElementById('searchInput');
+    const tableRows = document.querySelectorAll('#engagementTable tbody tr');
+    
+    if (searchInput) {
+        searchInput.addEventListener('keyup', function() {
+            const searchText = this.value.toLowerCase();
+            let visibleCount = 0;
+            
+            tableRows.forEach(row => {
+                if (row.cells && row.cells.length > 0) {
+                    const text = Array.from(row.cells).slice(0, -1).map(cell => cell.textContent.toLowerCase()).join(' ');
+                    if (text.includes(searchText)) {
+                        row.style.display = '';
+                        visibleCount++;
+                    } else {
+                        row.style.display = 'none';
+                    }
+                }
+            });
+        });
+    }
+    
+    // Filtrage par statut
+    const filterBtns = document.querySelectorAll('.filter-btn');
+    
+    filterBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            filterBtns.forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            
+            const filter = this.getAttribute('data-filter');
+            
+            tableRows.forEach(row => {
+                if (filter === 'all') {
+                    row.style.display = '';
+                } else {
+                    const statut = row.getAttribute('data-statut');
+                    row.style.display = statut === filter ? '' : 'none';
+                }
+            });
+        });
+    });
+    
+    // Export Excel simplifié
+    function exportTableToExcel() {
+        const visibleRows = Array.from(tableRows).filter(row => row.style.display !== 'none' && row.cells);
+        
+        if (visibleRows.length === 0) {
+            alert('Aucune donnée à exporter');
+            return;
+        }
+        
+        const exportData = [
+            ['N° Bon', 'Date', 'Fournisseur', 'Objet', 'Service', 'Montant (F CFA)', 'Statut']
+        ];
+        
+        visibleRows.forEach(row => {
+            const cells = row.cells;
+            exportData.push([
+                cells[0]?.textContent.trim() || '',
+                cells[1]?.textContent.trim() || '',
+                cells[2]?.textContent.trim() || '',
+                cells[3]?.textContent.trim() || '',
+                cells[4]?.textContent.trim() || '',
+                cells[5]?.textContent.trim() || '',
+                cells[6]?.textContent.trim() || ''
+            ]);
+        });
+        
+        const ws = XLSX.utils.aoa_to_sheet(exportData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Engagements');
+        XLSX.writeFile(wb, `engagements_${new Date().toISOString().split('T')[0]}.xlsx`);
+    }
+</script>
 {% endblock %}
